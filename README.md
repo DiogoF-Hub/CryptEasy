@@ -70,6 +70,6 @@ See [DEV_README.md, section 6: Branches and pull requests](DEV_README.md#6-branc
 
 ## Team
 
-SAE 5.02, BUT Réseaux & Télécommunications, *Cybersécurité des systèmes industriels et des infrastructures* track, IUT Nancy-Brabois.
+SAE 5.02, BUT Réseaux & Télécommunications, *Parcours Cybersécurité*, IUT Nancy-Brabois.
 
-Diogo CARVALHO · Sam KAFAI · Yanis DISCOURS · Yani SAI
+Diogo CARVALHO · Sam KAFAI · Yanis DISCOURS · YS
