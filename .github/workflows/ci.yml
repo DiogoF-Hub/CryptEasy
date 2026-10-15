@@ -1,4 +1,5 @@
-# Lint (Ruff) and tests on every PR and push to main (tests on Windows + Linux).
+# Lint (Ruff) and tests on every PR, and on every push to main or a personal *-dev branch
+# (tests on Windows + Linux).
 # On a push to main that changes `version` in pyproject.toml (e.g. `uv version --bump patch`):
 #   1. builds the one-file executable per OS,
 #   2. publishes a GitHub Release tagged v<version> with both executables and SHA256SUMS.
@@ -9,7 +10,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "*-dev"]
   pull_request:
   workflow_dispatch:
 
