@@ -60,7 +60,7 @@ def create_app(backend: Backend | None = None, *, port: int | None = None,
     @app.errorhandler(403)
     def forbidden(_e):
         return render_template("error.html", code=403, bare=True,
-                               message="Accès refusé. Ouvrez CryptEasy depuis son application, "
+                               message="Ouvrez CryptEasy depuis son application, "
                                        "pas en tapant l'adresse à la main."), 403
 
     @app.errorhandler(RequestEntityTooLarge)

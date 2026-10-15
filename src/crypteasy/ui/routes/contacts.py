@@ -36,7 +36,7 @@ def add():
     except Exception as exc:   # noqa: BLE001
         return _page(user_message(exc), form, 400)
     flash(f"Contact « {view.name} » ajouté. Empreinte : {view.fingerprint}. "
-          "Vérifiez-la avec lui par téléphone ou en personne.", "success")
+          "Vérifiez-la avec cette personne, par téléphone ou en face à face.", "success")
     return redirect(url_for("contacts.index"))
 
 

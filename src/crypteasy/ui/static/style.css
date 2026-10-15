@@ -147,7 +147,7 @@ input[type=file] { font: inherit; font-size: .9rem; color: var(--muted); max-wid
 .key-item { border: 1px solid var(--border); border-radius: 8px; padding: .85rem 1rem; }
 .key-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
 .tag { font-size: .75rem; font-weight: 600; color: var(--primary); background: var(--primary-soft); padding: .1rem .5rem; border-radius: 999px; }
-.fingerprint { font-family: var(--mono); font-size: .8rem; color: var(--muted); margin: .35rem 0 .6rem; word-break: break-all; }
+.fingerprint { font-family: var(--mono); font-size: .8rem; color: var(--muted); margin: .35rem 0 .6rem; word-break: normal; overflow-wrap: normal; }
 .key-actions { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
 .key-actions form { margin: 0; }
 .empty { color: var(--muted); }
@@ -170,13 +170,13 @@ input[type=file] { font: inherit; font-size: .9rem; color: var(--muted); max-wid
 .notice strong { color: var(--warn); }
 
 /* --- Page Info --- */
-.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
 .info-grid p, .card > p { margin: 0 0 .75rem; }
 .info-list { margin: 0 0 .75rem; padding-left: 1.2rem; }
 .info-list li { margin-bottom: .35rem; }
 .flow { list-style: none; margin: 0 0 .75rem; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
 .flow li { display: flex; gap: .65rem; align-items: flex-start; }
-.flow-step { flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); font-size: .8rem; font-weight: 700; }
+.flow-step { flex: none; margin-top: .1rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); font-size: .8rem; font-weight: 700; }
 .table-wrap { overflow-x: auto; margin-bottom: .75rem; }
 .format { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .format th, .format td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
