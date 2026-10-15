@@ -218,3 +218,10 @@ def test_safe_filename(raw, expected):
 def test_safe_filename_refuse(raw):
     with pytest.raises(BadInput):
         safe_filename(raw)
+
+
+def test_page_info(client):
+    r = client.get("/info")
+    assert r.status_code == 200
+    page = html(r)
+    assert "Chiffrement hybride" in page and "empreinte" in page.lower() and ".ceasy" in page

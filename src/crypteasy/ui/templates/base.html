@@ -27,6 +27,7 @@
       <a href="{{ url_for('decrypt.index') }}" {% if bp == 'decrypt' %}aria-current="page"{% endif %}>Déchiffrer</a>
       <a href="{{ url_for('keys.index') }}" {% if bp == 'keys' %}aria-current="page"{% endif %}>Mes clés</a>
       <a href="{{ url_for('contacts.index') }}" {% if bp == 'contacts' %}aria-current="page"{% endif %}>Contacts</a>
+      <a href="{{ url_for('home.info') }}" {% if request.endpoint == 'home.info' %}aria-current="page"{% endif %}>Info</a>
       {% block nav_extra %}{% endblock %}
     </nav>
   </header>

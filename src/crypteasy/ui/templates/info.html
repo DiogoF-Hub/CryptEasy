@@ -17,10 +17,10 @@
   <section class="card">
     <h2>Chiffrement hybride</h2>
     <ol class="flow" aria-label="Étapes du chiffrement">
-      <li><span class="flow-step">1</span><span>Une clé AES-256 aléatoire est tirée, <em>une par fichier</em>.</span></li>
-      <li><span class="flow-step">2</span><span>Le fichier est chiffré avec cette clé (AES-GCM), par blocs de 64 Kio : chaque bloc est aussi protégé contre la modification.</span></li>
-      <li><span class="flow-step">3</span><span>La clé AES est « enveloppée » avec la clé publique du destinataire (X25519 ou RSA-OAEP).</span></li>
-      <li><span class="flow-step">4</span><span>Pour déchiffrer, sa clé privée désenveloppe la clé AES, qui ouvre le fichier.</span></li>
+      <li><span class="flow-step">1</span> Une clé AES-256 aléatoire est tirée, <em>une par fichier</em>.</li>
+      <li><span class="flow-step">2</span> Le fichier est chiffré avec cette clé (AES-GCM), par blocs de 64 Kio : chaque bloc est aussi protégé contre la modification.</li>
+      <li><span class="flow-step">3</span> La clé AES est « enveloppée » avec la clé publique du destinataire (X25519 ou RSA-OAEP).</li>
+      <li><span class="flow-step">4</span> Pour déchiffrer, sa clé privée désenveloppe la clé AES, qui ouvre le fichier.</li>
     </ol>
     <p class="hint">Pourquoi deux étapes ? Le chiffrement à clé publique est lent et limité en taille ; AES est rapide sur de gros fichiers. On combine les deux.</p>
   </section>

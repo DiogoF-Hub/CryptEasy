@@ -10,3 +10,8 @@ def index():
     b = backend()
     return render_template("home.html", identities=b.list_identities(),
                            contacts=b.list_contacts())
+
+
+@bp.get("/info")
+def info():
+    return render_template("info.html")

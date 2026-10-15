@@ -168,3 +168,17 @@ input[type=file] { font: inherit; font-size: .9rem; color: var(--muted); max-wid
 /* --- Encadré d'avertissement (vérification des empreintes) --- */
 .notice { background: var(--warn-soft); color: var(--text); border-left: 3px solid var(--warn); border-radius: 6px; padding: .65rem .85rem; font-size: .9rem; margin: 0 0 1rem; }
 .notice strong { color: var(--warn); }
+
+/* --- Page Info --- */
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
+.info-grid p, .card > p { margin: 0 0 .75rem; }
+.info-list { margin: 0 0 .75rem; padding-left: 1.2rem; }
+.info-list li { margin-bottom: .35rem; }
+.flow { list-style: none; margin: 0 0 .75rem; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
+.flow li { display: flex; gap: .65rem; align-items: flex-start; }
+.flow-step { flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); font-size: .8rem; font-weight: 700; }
+.table-wrap { overflow-x: auto; margin-bottom: .75rem; }
+.format { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.format th, .format td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.format th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+.format td:last-child { white-space: nowrap; color: var(--muted); }
