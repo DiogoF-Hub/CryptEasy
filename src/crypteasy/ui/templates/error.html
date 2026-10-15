@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Erreur{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{% if code == 403 %}Accès refusé{% else %}Oups{% endif %}</h1>
+  <div class="alert alert-error" role="alert">{{ message }}</div>
+  {% if not bare %}<a class="btn" href="{{ url_for('home.index') }}">Retour à l'accueil</a>{% endif %}
+</section>
+{% endblock %}

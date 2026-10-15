@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Déchiffrer{% endblock %}
+{% block content %}
+<h1>Déchiffrer un fichier</h1>
+
+<section class="card narrow">
+  {% if not identities %}
+  <p class="empty">Pour déchiffrer, il faut votre paire de clés.
+    <a href="{{ url_for('keys.index') }}">Créez-la dans « Mes clés »</a>, puis envoyez votre clé publique à vos correspondants.</p>
+  {% else %}
+  <form method="post" action="{{ url_for('decrypt.run') }}" enctype="multipart/form-data" class="form" data-download autocomplete="off">
+    {{ csrf() }}
+
+    <div class="step"><span class="step-num">1</span> Le fichier reçu</div>
+    <label class="dropzone">
+      <input type="file" name="file" required accept=".ceasy">
+      <span class="dropzone-text">Glissez un fichier <code>.ceasy</code> ici ou <u>parcourez</u></span>
+      <span class="dropzone-name"></span>
+    </label>
+
+    <div class="step"><span class="step-num">2</span> Votre mot de passe</div>
+    {% if identities|length > 1 %}
+    <label>Clé
+      <select name="identity">
+        {% for k in identities %}
+          <option value="{{ k.fingerprint }}">{{ k.name }} ({{ k.kind }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
+    <label>Mot de passe {% if identities|length == 1 %}de la clé « {{ identities[0].name }} »{% else %}de la clé choisie{% endif %}
+      <input type="password" name="password" required autocomplete="current-password">
+    </label>
+
+    <button class="btn btn-primary btn-wide" type="submit" data-busy="Déchiffrement…">Déchiffrer et télécharger</button>
+    <p class="status" aria-live="polite"></p>
+  </form>
+  <p class="hint">Le fichier retrouve son nom d'origine.</p>
+  {% endif %}
+</section>
+{% endblock %}

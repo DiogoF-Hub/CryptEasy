@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Chiffrer{% endblock %}
+{% block content %}
+<h1>Chiffrer un fichier</h1>
+
+<section class="card narrow">
+  {% if not contacts %}
+  <p class="empty">Pour chiffrer, il faut la clé publique du destinataire.
+    <a href="{{ url_for('contacts.index') }}">Ajoutez d'abord un contact</a>.</p>
+  {% else %}
+  <form method="post" action="{{ url_for('encrypt.run') }}" enctype="multipart/form-data" class="form" data-download>
+    {{ csrf() }}
+
+    <div class="step"><span class="step-num">1</span> Le destinataire</div>
+    <label>Contact
+      <select name="contact" required>
+        {% if contacts|length > 1 %}<option value="">Choisir un contact</option>{% endif %}
+        {% for c in contacts %}
+          <option value="{{ c.fingerprint }}" {% if c.fingerprint == selected %}selected{% endif %}>{{ c.name }} ({{ c.kind }})</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <div class="step"><span class="step-num">2</span> Le fichier</div>
+    <label class="dropzone">
+      <input type="file" name="file" required>
+      <span class="dropzone-text">Glissez un fichier ici ou <u>parcourez</u></span>
+      <span class="dropzone-name"></span>
+      <small>Jusqu'à 4 Gio</small>
+    </label>
+
+    <details class="advanced">
+      <summary>Nom du fichier chiffré</summary>
+      <label>Nom (facultatif)
+        <input type="text" name="out_name" maxlength="200" placeholder="ex. dossier-mars">
+        <small>Par défaut, un nom aléatoire : le nom d'origine ne doit pas trahir le contenu. Il est conservé, chiffré, à l'intérieur du fichier.</small>
+      </label>
+    </details>
+
+    <button class="btn btn-primary btn-wide" type="submit" data-busy="Chiffrement…">Chiffrer et télécharger</button>
+    <p class="status" aria-live="polite"></p>
+  </form>
+  <p class="hint">Vous obtenez un fichier <code>{{ ext }}</code> à envoyer par le moyen de votre choix : seul le destinataire pourra l'ouvrir.</p>
+  {% endif %}
+</section>
+{% endblock %}

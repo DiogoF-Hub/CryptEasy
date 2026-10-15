@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CryptEasy{% endblock %} · CryptEasy</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  {% if demo_mode %}
+  <div class="demo-banner" role="alert">
+    <strong>Mode démo</strong> : moteur factice, les fichiers ne sont PAS chiffrés.
+  </div>
+  {% endif %}
+
+  {% if not bare %}
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('home.index') }}">
+      <img src="{{ url_for('static', filename='logo.svg') }}" alt="" width="28" height="28">
+      CryptEasy
+    </a>
+    {% set bp = request.blueprint %}
+    <nav aria-label="Navigation principale">
+      <a href="{{ url_for('encrypt.index') }}" {% if bp == 'encrypt' %}aria-current="page"{% endif %}>Chiffrer</a>
+      <a href="{{ url_for('decrypt.index') }}" {% if bp == 'decrypt' %}aria-current="page"{% endif %}>Déchiffrer</a>
+      <a href="{{ url_for('keys.index') }}" {% if bp == 'keys' %}aria-current="page"{% endif %}>Mes clés</a>
+      <a href="{{ url_for('contacts.index') }}" {% if bp == 'contacts' %}aria-current="page"{% endif %}>Contacts</a>
+      {% block nav_extra %}{% endblock %}
+    </nav>
+  </header>
+  {% endif %}
+
+  <main class="container">
+    {% for category, msg in get_flashed_messages(with_categories=true) %}
+      <div class="alert alert-{{ category }}" role="status">{{ msg }}</div>
+    {% endfor %}
+    {% if error %}
+      <div class="alert alert-error" role="alert">{{ error }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">CryptEasy · SAÉ 5.02 · IUT Nancy-Brabois</footer>
+</body>
+</html>

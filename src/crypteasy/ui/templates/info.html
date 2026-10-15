@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Comment ça marche{% endblock %}
+{% block content %}
+<h1>Comment ça marche</h1>
+
+<div class="info-grid">
+  <section class="card">
+    <h2>Deux clés par personne</h2>
+    <p>Chaque utilisateur possède une <strong>paire de clés</strong> :</p>
+    <ul class="info-list">
+      <li><strong>la clé publique</strong> se partage librement : elle sert à vous chiffrer des fichiers ;</li>
+      <li><strong>la clé privée</strong> reste sur votre ordinateur, protégée par votre mot de passe : elle seule permet de déchiffrer.</li>
+    </ul>
+    <p>Si vous perdez votre clé privée ou oubliez son mot de passe, les fichiers chiffrés pour vous ne peuvent plus être ouverts. Personne ne peut les récupérer, pas même CryptEasy.</p>
+  </section>
+
+  <section class="card">
+    <h2>Chiffrement hybride</h2>
+    <ol class="flow" aria-label="Étapes du chiffrement">
+      <li><span class="flow-step">1</span><span>Une clé AES-256 aléatoire est tirée, <em>une par fichier</em>.</span></li>
+      <li><span class="flow-step">2</span><span>Le fichier est chiffré avec cette clé (AES-GCM), par blocs de 64 Kio : chaque bloc est aussi protégé contre la modification.</span></li>
+      <li><span class="flow-step">3</span><span>La clé AES est « enveloppée » avec la clé publique du destinataire (X25519 ou RSA-OAEP).</span></li>
+      <li><span class="flow-step">4</span><span>Pour déchiffrer, sa clé privée désenveloppe la clé AES, qui ouvre le fichier.</span></li>
+    </ol>
+    <p class="hint">Pourquoi deux étapes ? Le chiffrement à clé publique est lent et limité en taille ; AES est rapide sur de gros fichiers. On combine les deux.</p>
+  </section>
+
+  <section class="card">
+    <h2>Vérifier une empreinte</h2>
+    <p>L'<strong>empreinte</strong> est un résumé unique de la clé publique (SHA-256). Quand vous ajoutez un contact, comparez-la avec lui <strong>de vive voix</strong>, par téléphone ou en personne.</p>
+    <p>Si quelqu'un a remplacé la clé pendant son envoi (par e-mail, messagerie…), les empreintes ne correspondront pas : c'est le seul moyen de détecter cette attaque, dite « de l'homme du milieu ».</p>
+  </section>
+
+  <section class="card">
+    <h2>Ce que CryptEasy ne protège pas</h2>
+    <ul class="info-list">
+      <li>un ordinateur déjà compromis (logiciel espion, accès à votre session) ;</li>
+      <li>un mot de passe faible ou noté à côté de l'ordinateur ;</li>
+      <li>une clé publique de contact non vérifiée ;</li>
+      <li>le fait qu'un fichier a été échangé : seul son contenu est caché, pas son existence ni sa taille approximative.</li>
+    </ul>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Format d'un fichier <code>.ceasy</code> (version 1)</h2>
+  <p class="hint">Format en cours de validation par l'équipe (porte MS0) : les détails peuvent encore changer.</p>
+  <div class="table-wrap">
+    <table class="format">
+      <thead><tr><th>Partie</th><th>Contenu</th><th>Visible sans la clé ?</th></tr></thead>
+      <tbody>
+        <tr><td>Signature</td><td><code>CRYPTEZ</code> + numéro de version</td><td>Oui</td></tr>
+        <tr><td>Algorithme</td><td>RSA-OAEP-SHA256 ou X25519-HKDF-SHA256</td><td>Oui</td></tr>
+        <tr><td>Destinataire</td><td>Empreinte de sa clé publique : permet de dire tout de suite « ce fichier n'est pas pour vous »</td><td>Oui</td></tr>
+        <tr><td>Clé enveloppée</td><td>La clé AES du fichier, chiffrée pour le destinataire</td><td>Chiffrée</td></tr>
+        <tr><td>Métadonnées</td><td>Nom d'origine du fichier, dans un bloc de taille fixe (512 octets)</td><td>Chiffrées</td></tr>
+        <tr><td>Contenu</td><td>Blocs AES-GCM numérotés ; le dernier est marqué, ce qui détecte un fichier tronqué ou réordonné</td><td>Chiffré</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="hint">L'en-tête entier est authentifié avec chaque bloc : modifier un seul octet rend le fichier illisible au lieu de produire un résultat faux.</p>
+</section>
+{% endblock %}

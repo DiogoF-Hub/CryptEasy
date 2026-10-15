@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, key_head %}
+{% block title %}Contacts{% endblock %}
+{% block content %}
+<h1>Contacts</h1>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Ajouter un contact</h2>
+    <form method="post" action="{{ url_for('contacts.add') }}" enctype="multipart/form-data" class="form" autocomplete="off">
+      {{ csrf() }}
+      <label>Nom du contact
+        <input type="text" name="name" required maxlength="64" value="{{ form.get('name', '') }}">
+      </label>
+      <label>Fichier de sa clé publique
+        <input type="file" name="keyfile" accept=".pem,.pub,.txt">
+      </label>
+      <details class="advanced" {% if form.get('keytext') %}open{% endif %}>
+        <summary>Ou coller sa clé publique</summary>
+        <textarea name="keytext" rows="6" spellcheck="false"
+                  placeholder="-----BEGIN PUBLIC KEY-----&#10;…">{{ form.get('keytext', '') }}</textarea>
+      </details>
+      <button class="btn btn-primary" type="submit">Ajouter</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Mes contacts</h2>
+    <p class="notice">
+      <strong>Vérifiez chaque empreinte</strong> avec la personne, de vive voix (téléphone, en personne).
+      Si quelqu'un a remplacé sa clé pendant l'envoi, c'est le seul moyen de s'en rendre compte.
+    </p>
+    {% if contacts %}
+    <ul class="key-list">
+      {% for c in contacts %}
+      <li class="key-item">
+        {{ key_head(c) }}
+        <div class="key-actions">
+          <a class="btn btn-small" href="{{ url_for('encrypt.index', contact=c.fingerprint) }}">Lui chiffrer un fichier</a>
+          <form method="post" action="{{ url_for('contacts.remove') }}"
+                data-confirm="Supprimer le contact « {{ c.name }} » ?">
+            {{ csrf() }}
+            <input type="hidden" name="fingerprint" value="{{ c.fingerprint }}">
+            <button class="btn btn-small btn-ghost-danger" type="submit">Supprimer</button>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">Aucun contact pour l'instant. Importez la clé publique d'un correspondant pour commencer.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

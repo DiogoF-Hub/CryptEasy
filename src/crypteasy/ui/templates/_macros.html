@@ -1,0 +1,11 @@
+{# Champ CSRF de Flask-WTF : à mettre dans CHAQUE formulaire POST. #}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{# Une clé (à soi ou d'un contact) : nom, type, empreinte. #}
+{% macro key_head(k) %}
+  <div class="key-head">
+    <strong>{{ k.name }}</strong>
+    <span class="tag">{{ k.kind }}</span>
+  </div>
+  <div class="fingerprint" title="Empreinte de la clé publique">{{ k.fingerprint }}</div>
+{% endmacro %}

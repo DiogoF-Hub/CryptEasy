@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, key_head %}
+{% block title %}Mes clés{% endblock %}
+{% block content %}
+<h1>Mes clés</h1>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Créer une paire de clés</h2>
+    <form method="post" action="{{ url_for('keys.create') }}" class="form" autocomplete="off">
+      {{ csrf() }}
+      <label>Nom de la clé
+        <input type="text" name="name" required maxlength="64" placeholder="ex. Perso, Travail"
+               value="{{ form.get('name', '') }}">
+      </label>
+      <label>Mot de passe de protection
+        <input type="password" name="password" required minlength="{{ min_pw }}" autocomplete="new-password">
+        <small>Au moins {{ min_pw }} caractères. Une phrase facile à retenir fonctionne très bien. Il protège votre clé privée : sans lui, impossible de déchiffrer.</small>
+      </label>
+      <label>Confirmer le mot de passe
+        <input type="password" name="password2" required minlength="{{ min_pw }}" autocomplete="new-password">
+      </label>
+
+      {% set chosen = form.get('key_type') or default_type %}
+      <details class="advanced" {% if chosen != default_type %}open{% endif %}>
+        <summary>Options avancées</summary>
+        <label>Type de clé
+          <select name="key_type">
+            {% for value, label in key_types.items() %}
+              <option value="{{ value }}" {% if value == chosen %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <small>Le réglage par défaut convient à tous les usages. RSA sert surtout à échanger avec des outils plus anciens.</small>
+        </label>
+      </details>
+
+      <button class="btn btn-primary" type="submit" data-busy="Génération…">Générer</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Mes paires de clés</h2>
+    {% if identities %}
+    <ul class="key-list">
+      {% for k in identities %}
+      <li class="key-item">
+        {{ key_head(k) }}
+        <div class="key-actions">
+          <a class="btn btn-small" href="{{ url_for('keys.export_public', fpr=k.fingerprint) }}">Exporter ma clé publique</a>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="hint">Envoyez votre <strong>clé publique</strong> à vos correspondants, puis lisez-leur l'<strong>empreinte</strong> par téléphone ou en personne : ils pourront vérifier qu'ils ont bien la vôtre.</p>
+    {% else %}
+    <p class="empty">Aucune clé pour l'instant. Créez-en une pour pouvoir recevoir des fichiers.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
