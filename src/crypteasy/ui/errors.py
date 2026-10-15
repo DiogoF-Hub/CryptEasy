@@ -1,4 +1,6 @@
-"""Erreurs côté interface et LE seul endroit qui les traduit en messages (§ 4 S7, point 4).
+"""Erreurs côté interface et LE seul endroit qui les traduit en messages.
+
+Textes repris de SPEC_TECHNIQUE.md, F7.
 
 Les routes n'attrapent jamais les exceptions de core/ ou keystore/ directement :
 ui/backend.py les convertit en exceptions ci-dessous, les routes affichent
@@ -22,15 +24,24 @@ class UIError(Exception):
 
 
 class WrongPassword(UIError):
-    default = "Mot de passe incorrect."
+    default = "Mot de passe incorrect pour cette clé."
 
 
 class WrongRecipient(UIError):
-    default = "Ce fichier n'a pas été chiffré pour vous."
+    default = "Ce fichier n'a pas été chiffré pour cette clé."
+
+
+class WrongFilePassword(UIError):
+    default = "Mot de passe du fichier incorrect."
+
+
+class FilePasswordRequired(UIError):
+    default = ("Ce fichier est protégé par un mot de passe supplémentaire : "
+               "saisissez-le dans « Mot de passe du fichier ».")
 
 
 class CorruptedFile(UIError):
-    default = "Le fichier est corrompu ou a été modifié."
+    default = "Ce fichier est endommagé ou a été modifié. Rien n'a été déchiffré."
 
 
 class UnsupportedFormat(UIError):
@@ -39,7 +50,11 @@ class UnsupportedFormat(UIError):
 
 
 class InvalidKey(UIError):
-    default = "Cette clé publique est invalide ou illisible."
+    default = "Ce n'est pas une clé publique valide."
+
+
+class InvalidPrivateKey(UIError):
+    default = "Ce n'est pas une clé privée valide."
 
 
 class NotFound(UIError):

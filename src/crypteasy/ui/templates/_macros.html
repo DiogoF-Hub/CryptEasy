@@ -9,3 +9,24 @@
   </div>
   <div class="fingerprint" title="Empreinte de la clé publique">{{ k.fingerprint }}</div>
 {% endmacro %}
+
+{# Indicateur de niveau de sécurité (F6). Rendu par le serveur, puis recalculé en
+   direct par app.js à partir des mêmes règles (data-rules, issues de security_levels.py). #}
+{% macro rating_box(r, rules) %}
+  <div class="rating rating-{{ r.level }}" data-rating data-rules="{{ rules }}" aria-live="polite">
+    <div class="rating-head">
+      <span class="rating-icon" aria-hidden="true">{{ r.icon }}</span>
+      Niveau de sécurité : <strong class="rating-label">{{ r.label }}</strong>
+    </div>
+    <ul class="rating-reasons">
+      {% for lvl, text in r.reasons %}<li class="lvl-{{ lvl }}">{{ text }}</li>{% endfor %}
+    </ul>
+  </div>
+{% endmacro %}
+
+{# Indicateur de robustesse d'un mot de passe (calculé dans le navigateur uniquement). #}
+{% macro pw_meter(field) %}
+  <div class="pw-meter" data-pw-meter="{{ field }}" aria-live="polite">
+    <div class="pw-bar"><span></span></div><small class="pw-text"></small>
+  </div>
+{% endmacro %}

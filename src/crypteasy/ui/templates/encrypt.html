@@ -1,28 +1,20 @@
 {% extends "base.html" %}
-{% from "_macros.html" import csrf %}
+{% from "_macros.html" import csrf, rating_box, pw_meter %}
 {% block title %}Chiffrer{% endblock %}
 {% block content %}
 <h1>Chiffrer un fichier</h1>
 
 <section class="card narrow">
-  {% if not contacts %}
+  {% if not contacts and not identities %}
   <p class="empty">Pour chiffrer, il faut la clé publique du destinataire.
-    <a href="{{ url_for('contacts.index') }}">Ajoutez d'abord un contact</a>.</p>
+    <a href="{{ url_for('contacts.index') }}">Ajoutez un contact</a>, ou
+    <a href="{{ url_for('keys.index') }}">créez votre propre paire de clés</a>.</p>
   {% else %}
-  <form method="post" action="{{ url_for('encrypt.run') }}" enctype="multipart/form-data" class="form" data-download>
+  <form method="post" action="{{ url_for('encrypt.run') }}" enctype="multipart/form-data"
+        class="form" data-download autocomplete="off">
     {{ csrf() }}
 
-    <div class="step"><span class="step-num">1</span> Le destinataire</div>
-    <label>Contact
-      <select name="contact" required>
-        {% if contacts|length > 1 %}<option value="">Choisir un contact</option>{% endif %}
-        {% for c in contacts %}
-          <option value="{{ c.fingerprint }}" {% if c.fingerprint == selected %}selected{% endif %}>{{ c.name }} ({{ c.kind }})</option>
-        {% endfor %}
-      </select>
-    </label>
-
-    <div class="step"><span class="step-num">2</span> Le fichier</div>
+    <div class="step"><span class="step-num">1</span> Le fichier</div>
     <label class="dropzone">
       <input type="file" name="file" required>
       <span class="dropzone-text">Glissez un fichier ici ou <u>parcourez</u></span>
@@ -30,18 +22,90 @@
       <small>Jusqu'à 4 Gio</small>
     </label>
 
-    <details class="advanced">
-      <summary>Nom du fichier chiffré</summary>
-      <label>Nom (facultatif)
-        <input type="text" name="out_name" maxlength="200" placeholder="ex. dossier-mars">
-        <small>Par défaut, un nom aléatoire : le nom d'origine ne doit pas trahir le contenu. Il est conservé, chiffré, à l'intérieur du fichier.</small>
-      </label>
+    <div class="step"><span class="step-num">2</span> Le destinataire</div>
+    <label>Destinataire
+      <select name="recipient" required data-rate="key_type">
+        <option value="">Choisir…</option>
+        {% if contacts %}
+        <optgroup label="Contacts">
+          {% for c in contacts %}
+          <option value="{{ c.fingerprint }}" data-rate-value="{{ c.kind|lower }}" {% if c.fingerprint == selected %}selected{% endif %}>{{ c.name }} ({{ c.kind }})</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+        {% if identities %}
+        <optgroup label="Mes clés">
+          {% for k in identities %}
+          <option value="{{ k.fingerprint }}" data-rate-value="{{ k.kind|lower }}" {% if k.fingerprint == selected %}selected{% endif %}>{{ k.name }} ({{ k.kind }})</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+      </select>
+    </label>
+
+    <div class="step"><span class="step-num">3</span> Sécurité</div>
+    <details class="advanced" {% if form.cipher and form.cipher != defaults.cipher or form.use_password or form.out_name %}open{% endif %}>
+      <summary>Réglages avancés (par défaut : recommandés)</summary>
+      <div class="form">
+        <label>Chiffrement du fichier
+          <select name="cipher" data-rate="cipher">
+            {% for value, label in ciphers.items() %}
+            <option value="{{ value }}" {% if value == (form.cipher or defaults.cipher) %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" name="use_password" value="1" data-toggle=".extra-password" {% if form.use_password %}checked{% endif %}>
+          Ajouter un mot de passe supplémentaire
+        </label>
+        <fieldset class="extra-password">
+          <legend class="sr-only">Mot de passe supplémentaire</legend>
+          <p class="hint">Le destinataire devra connaître ce mot de passe <strong>en plus</strong> de sa clé privée. Transmettez-le par un autre canal que le fichier.</p>
+          <label>Mot de passe du fichier
+            <input type="password" name="file_password" autocomplete="new-password"
+                   data-rate-password data-rate-when="use_password">
+            {{ pw_meter('file_password') }}
+          </label>
+          <label>Confirmer
+            <input type="password" name="file_password2" autocomplete="new-password">
+          </label>
+          <label>Dérivation de clé (KDF)
+            <select name="kdf" data-rate="kdf" data-rate-when="use_password">
+              {% for value, label in kdfs.items() %}
+              <option value="{{ value }}" {% if value == (form.kdf or defaults.kdf) %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Force de la KDF
+            <select name="kdf_strength" data-rate="kdf_strength" data-rate-when="use_password">
+              {% for value, label in kdf_strengths.items() %}
+              <option value="{{ value }}" {% if value == (form.kdf_strength or defaults.kdf_strength) %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Sel
+            <select name="salt" data-rate="salt" data-rate-when="use_password">
+              {% for value, label in salts.items() %}
+              <option value="{{ value }}" {% if value == (form.salt or defaults.salt) %}selected{% endif %} {% if value == '0' %}data-pbkdf2-only{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </fieldset>
+
+        <label>Nom du paquet (facultatif)
+          <input type="text" name="out_name" maxlength="200" placeholder="ex. dossier-mars" value="{{ form.out_name }}">
+          <small>Par défaut un nom neutre (encrypted_date.zip) : le nom d'origine reste caché à l'intérieur.</small>
+        </label>
+      </div>
     </details>
+
+    {{ rating_box(rating, rules) }}
 
     <button class="btn btn-primary btn-wide" type="submit" data-busy="Chiffrement…">Chiffrer et télécharger</button>
     <p class="status" aria-live="polite"></p>
   </form>
-  <p class="hint">Vous obtenez un fichier <code>{{ ext }}</code> à envoyer par le moyen de votre choix : seul le destinataire pourra l'ouvrir.</p>
+  <p class="hint">Vous obtenez un paquet <code>{{ ext }}</code> à envoyer par le moyen de votre choix (mail, clé USB…) : seul le destinataire pourra l'ouvrir.</p>
   {% endif %}
 </section>
 {% endblock %}

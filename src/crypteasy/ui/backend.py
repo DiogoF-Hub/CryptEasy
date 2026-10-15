@@ -1,8 +1,9 @@
-"""Backend : la seule porte entre l'interface et core/ + keystore/ (§ 3, § 5 de la fiche Track B).
+"""Backend : la seule porte entre l'interface et core/ + keystore/.
 
 - `Backend` (Protocol) : ce dont les écrans ont besoin. Les routes n'appellent que ça.
-- `RealBackend` : adaptateur au-dessus de core/ et keystore/ (S7, quand A et C ont mergé).
-- `FakeBackend` (fake_backend.py) : pour les tests et le développement avant S7.
+- `RealBackend` : adaptateur au-dessus de core/ et keystore/ (à écrire quand leurs
+  contrats sont figés, SPEC_TECHNIQUE § 10).
+- `FakeBackend` (fake_backend.py) : pour les tests et le développement en attendant.
 
 Choix du backend par défaut (create_app(backend=None)) :
   CRYPTEASY_FAKE_BACKEND=1  → FakeBackend (bandeau « Mode démo »)
@@ -17,6 +18,10 @@ from pathlib import Path
 from typing import Iterator, Protocol
 
 from . import errors
+from .security_levels import EncryptOptions
+
+# Réexportés pour les routes (les listes de choix vivent dans security_levels.py)
+from .security_levels import DEFAULT_KEY_TYPE, KEY_TYPES  # noqa: F401
 
 
 @dataclass(frozen=True)
@@ -24,47 +29,56 @@ class KeyView:
     """Ce que l'écran affiche d'une clé (à soi ou d'un contact)."""
     name: str
     kind: str          # libellé affiché : "X25519", "RSA-3072"
-    fingerprint: str   # SHA-256 du SPKI DER, hex groupé (format fixé par keys.fingerprint)
-
-
-# Types de clés proposés. D2 : X25519 par défaut, RSA en options avancées. D3 : RSA 3072 conseillé.
-KEY_TYPES: dict[str, str] = {
-    "x25519": "X25519 (recommandé)",
-    "rsa-3072": "RSA 3072 bits",
-    "rsa-2048": "RSA 2048 bits",
-    "rsa-4096": "RSA 4096 bits",
-}
-DEFAULT_KEY_TYPE = "x25519"
+    fingerprint: str   # SHA-256 du DER de la clé publique, 16 groupes de 4 hexa (§ 6.3)
 
 
 class Backend(Protocol):
-    demo: bool                 # True → bandeau « Mode démo »
-    min_password_length: int   # affiché sur le formulaire ; la règle elle-même est appliquée par le backend (D4)
+    demo: bool                        # True → bandeau « Mode démo »
+    min_password_length: int          # D5 ; affiché, la règle est appliquée par le backend
+    key_protection_kdfs: dict[str, str]
+    """KDF proposées pour protéger la clé privée (§ 4, D4). {} = pas de choix
+    (ex. si D4 retient BestAvailableEncryption) : le menu n'est pas affiché."""
 
-    # Mes clés
+    # ----- Mes clés (F1, F2)
     def list_identities(self) -> list[KeyView]: ...
-    def create_identity(self, name: str, key_type: str, password: bytes) -> KeyView:
+    def create_identity(self, name: str, key_type: str, password: bytes,
+                        kdf: str | None = None) -> KeyView:
         """Lève WeakPassword, AlreadyExists, BadInput."""
         ...
-    def export_public_key(self, fingerprint: str) -> bytes:
-        """PEM de MA clé publique. Lève NotFound."""
+    def import_private_key(self, name: str, pem: bytes, password: bytes) -> KeyView:
+        """PEM chiffré : `password` l'ouvre. PEM non chiffré : `password` devient sa protection.
+        Lève InvalidPrivateKey, WrongPassword, WeakPassword, AlreadyExists."""
         ...
+    def export_public_key(self, fingerprint: str) -> bytes: ...
+    def export_private_key(self, fingerprint: str) -> bytes:
+        """PEM tel que stocké, donc chiffré. Lève NotFound."""
+        ...
+    def delete_identity(self, fingerprint: str) -> None: ...
 
-    # Contacts
+    # ----- Contacts (F3)
     def list_contacts(self) -> list[KeyView]: ...
     def add_contact(self, name: str, public_pem: bytes) -> KeyView:
         """Lève InvalidKey, AlreadyExists."""
         ...
+    def rename_contact(self, fingerprint: str, new_name: str) -> None:
+        """Lève NotFound, AlreadyExists."""
+        ...
     def remove_contact(self, fingerprint: str) -> None: ...
 
-    # Fichiers (chemins : le moteur travaille par blocs, jamais tout en mémoire)
-    def encrypt_file(self, src: Path, dst: Path, contact_fingerprint: str) -> None:
-        """Lève NotFound."""
+    # ----- Fichiers (F4, F5) : chemins, le moteur travaille par blocs
+    def encrypt_file(self, src: Path, dst: Path, recipient_fingerprint: str,
+                     options: EncryptOptions) -> None:
+        """Destinataire = un contact OU une de mes clés. Écrit le paquet .zip dans dst.
+        Lève NotFound, BadInput."""
         ...
-    def decrypt_file(self, src: Path, out_dir: Path, identity_fingerprint: str,
-                     password: bytes) -> Path:
-        """Renvoie le fichier déchiffré (nom d'origine, assaini par core/).
-        Lève WrongPassword, WrongRecipient, CorruptedFile, UnsupportedFormat, NotFound."""
+    def decrypt_file(self, src: Path, out_dir: Path, *, key_password: bytes,
+                     file_password: bytes | None = None,
+                     identity_fingerprint: str | None = None,
+                     private_pem: bytes | None = None) -> Path:
+        """Une de mes clés (identity_fingerprint) OU une clé importée (private_pem).
+        Renvoie le fichier déchiffré, nom d'origine assaini (§ 8).
+        Lève WrongPassword, WrongRecipient, FilePasswordRequired, WrongFilePassword,
+        CorruptedFile, UnsupportedFormat, InvalidPrivateKey, NotFound."""
         ...
 
 
@@ -76,87 +90,79 @@ def default_backend() -> Backend:
 
 
 # --------------------------------------------------------------------------- #
-# RealBackend — À TERMINER EN S7, quand les stubs de Track A (core/) et Track C
-# (keystore/) sont mergés. Écrit d'après les signatures du § 3 ; NON TESTÉ tant
-# que ces modules n'existent pas. Les parties « identité » attendent l'API de
-# keystore/identity.py, qui n'est pas encore fixée au § 3.
+# RealBackend — SQUELETTE. Les signatures de core/ (keys, package, hybrid, kdf,
+# errors) et keystore/ (paths, identities, contacts) ne sont pas encore figées
+# (SPEC_TECHNIQUE § 10, décisions § 12). Chaque méthode dit quel module appeler.
 # --------------------------------------------------------------------------- #
 class RealBackend:
     demo = False
-    min_password_length = 15   # À ALIGNER sur la politique D4 de Track C
+    min_password_length = 12        # D5
+    key_protection_kdfs: dict[str, str] = {}   # à remplir selon D4
 
     def __init__(self) -> None:
-        from crypteasy.core import errors as core_errors, hybrid, keys
-        from crypteasy.keystore import contacts
-        self._keys, self._hybrid, self._contacts = keys, hybrid, contacts
+        from crypteasy.core import errors as core_errors
         self._core_errors = core_errors
 
     @contextmanager
     def _translate(self) -> Iterator[None]:
-        """Exceptions de core/ → exceptions d'interface. Les plus précises d'abord."""
+        """Exceptions de core/ → exceptions d'interface (F7). Noms à confirmer avec
+        Member 1 ; les plus précises d'abord, car elles peuvent hériter des autres."""
         e = self._core_errors
+        mapping = [
+            ("WrongRecipientError", errors.WrongRecipient),
+            ("FilePasswordRequiredError", errors.FilePasswordRequired),
+            ("WrongFilePasswordError", errors.WrongFilePassword),
+            ("WrongPasswordError", errors.WrongPassword),
+            ("UnsupportedFormatError", errors.UnsupportedFormat),
+            ("DecryptionError", errors.CorruptedFile),
+            ("InvalidPrivateKeyError", errors.InvalidPrivateKey),
+            ("InvalidKeyError", errors.InvalidKey),
+        ]
         try:
             yield
-        except getattr(e, "WrongRecipientError", ()) as exc:
-            raise errors.WrongRecipient() from exc
-        except getattr(e, "UnsupportedFormatError", ()) as exc:
-            raise errors.UnsupportedFormat() from exc
-        except getattr(e, "DecryptionError", ()) as exc:
-            raise errors.CorruptedFile() from exc
-        except getattr(e, "InvalidKeyError", ()) as exc:
-            raise errors.InvalidKey() from exc
+        except Exception as exc:
+            for name, ui_error in mapping:
+                cls = getattr(e, name, None)
+                if cls is not None and isinstance(exc, cls):
+                    raise ui_error() from exc
+            raise
 
-    def _kind(self, public_pem: bytes) -> str:
-        pub = self._keys.public_from_pem(public_pem)
-        size = getattr(pub, "key_size", None)
-        return f"RSA-{size}" if size else "X25519"
+    def _todo(self, where: str):
+        raise NotImplementedError(f"RealBackend : brancher sur {where} quand le contrat est figé")
 
-    def _contact(self, fingerprint: str):
-        for c in self._contacts.list_contacts():
-            if c.fingerprint == fingerprint:
-                return c
-        raise errors.NotFound("Contact introuvable.")
+    def list_identities(self):
+        return self._todo("keystore/identities.py")
 
-    # -- Contacts (§ 3 : keystore/contacts.py) --------------------------------
-    def list_contacts(self) -> list[KeyView]:
-        return [KeyView(c.name, self._kind(c.enc_pub_pem), c.fingerprint)
-                for c in self._contacts.list_contacts()]
+    def create_identity(self, name, key_type, password, kdf=None):
+        return self._todo("core/keys.py (génération) + keystore/identities.py (stockage)")
 
-    def add_contact(self, name: str, public_pem: bytes) -> KeyView:
-        with self._translate():
-            c = self._contacts.add_contact(name, public_pem)
-        return KeyView(c.name, self._kind(c.enc_pub_pem), c.fingerprint)
+    def import_private_key(self, name, pem, password):
+        return self._todo("core/keys.py (lecture PEM) + keystore/identities.py")
 
-    def remove_contact(self, fingerprint: str) -> None:
-        self._contacts.remove_contact(fingerprint)
+    def export_public_key(self, fingerprint):
+        return self._todo("keystore/identities.py")
 
-    # -- Fichiers (§ 3 : core/hybrid.py) --------------------------------------
-    def encrypt_file(self, src: Path, dst: Path, contact_fingerprint: str) -> None:
-        contact = self._contact(contact_fingerprint)
-        with self._translate():
-            pub = self._keys.public_from_pem(contact.enc_pub_pem)
-            self._hybrid.encrypt_file(src, dst, pub)
+    def export_private_key(self, fingerprint):
+        return self._todo("keystore/identities.py")
 
-    def decrypt_file(self, src: Path, out_dir: Path, identity_fingerprint: str,
-                     password: bytes) -> Path:
-        pem = self._identity_private_pem(identity_fingerprint)
-        try:
-            key = self._keys.private_from_pem(pem, password)
-        except getattr(self._core_errors, "InvalidKeyError", ()) as exc:
-            # § 4 S7 de la fiche : InvalidKeyError au chargement de la clé privée = mauvais mot de passe
-            raise errors.WrongPassword() from exc
-        with self._translate():
-            return self._hybrid.decrypt_file(src, out_dir, key)
+    def delete_identity(self, fingerprint):
+        return self._todo("keystore/identities.py")
 
-    # -- Identités : API de keystore/identity.py à fixer avec Track C ----------
-    def list_identities(self) -> list[KeyView]:
-        raise NotImplementedError("keystore/identity.py : API à fixer avec Track C")
+    def list_contacts(self):
+        return self._todo("keystore/contacts.py")
 
-    def create_identity(self, name: str, key_type: str, password: bytes) -> KeyView:
-        raise NotImplementedError("keystore/identity.py : API à fixer avec Track C")
+    def add_contact(self, name, public_pem):
+        return self._todo("keystore/contacts.py")
 
-    def export_public_key(self, fingerprint: str) -> bytes:
-        raise NotImplementedError("keystore/identity.py : API à fixer avec Track C")
+    def rename_contact(self, fingerprint, new_name):
+        return self._todo("keystore/contacts.py")
 
-    def _identity_private_pem(self, fingerprint: str) -> bytes:
-        raise NotImplementedError("keystore/identity.py : API à fixer avec Track C")
+    def remove_contact(self, fingerprint):
+        return self._todo("keystore/contacts.py")
+
+    def encrypt_file(self, src, dst, recipient_fingerprint, options):
+        return self._todo("core/hybrid.py + core/package.py")
+
+    def decrypt_file(self, src, out_dir, *, key_password, file_password=None,
+                     identity_fingerprint=None, private_pem=None):
+        return self._todo("core/package.py + core/hybrid.py")

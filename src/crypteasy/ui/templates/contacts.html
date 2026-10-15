@@ -12,7 +12,7 @@
       <label>Nom du contact
         <input type="text" name="name" required maxlength="64" value="{{ form.get('name', '') }}">
       </label>
-      <label>Fichier de sa clé publique
+      <label>Fichier .pem de sa clé publique
         <input type="file" name="keyfile" accept=".pem,.pub,.txt">
       </label>
       <details class="advanced" {% if form.get('keytext') %}open{% endif %}>
@@ -34,9 +34,21 @@
     <ul class="key-list">
       {% for c in contacts %}
       <li class="key-item">
+        {% if editing == c.fingerprint %}
+        <form method="post" action="{{ url_for('contacts.rename') }}" class="rename-form">
+          {{ csrf() }}
+          <input type="hidden" name="fingerprint" value="{{ c.fingerprint }}">
+          <label class="sr-only" for="rename-{{ loop.index }}">Nouveau nom</label>
+          <input id="rename-{{ loop.index }}" type="text" name="name" required maxlength="64" value="{{ c.name }}" autofocus>
+          <button class="btn btn-small btn-primary" type="submit">Enregistrer</button>
+          <a class="btn btn-small" href="{{ url_for('contacts.index') }}">Annuler</a>
+        </form>
+        <div class="fingerprint">{{ c.fingerprint }}</div>
+        {% else %}
         {{ key_head(c) }}
         <div class="key-actions">
           <a class="btn btn-small" href="{{ url_for('encrypt.index', contact=c.fingerprint) }}">Lui chiffrer un fichier</a>
+          <a class="btn btn-small btn-ghost" href="{{ url_for('contacts.index', renommer=c.fingerprint) }}">Renommer</a>
           <form method="post" action="{{ url_for('contacts.remove') }}"
                 data-confirm="Supprimer le contact « {{ c.name }} » ?">
             {{ csrf() }}
@@ -44,6 +56,7 @@
             <button class="btn btn-small btn-ghost-danger" type="submit">Supprimer</button>
           </form>
         </div>
+        {% endif %}
       </li>
       {% endfor %}
     </ul>

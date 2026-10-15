@@ -182,3 +182,47 @@ input[type=file] { font: inherit; font-size: .9rem; color: var(--muted); max-wid
 .format th, .format td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
 .format th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
 .format td:last-child { white-space: nowrap; color: var(--muted); }
+
+/* --- Indicateur de niveau de sécurité (F6) --- */
+.rating { border: 1px solid var(--border); border-left-width: 4px; border-radius: 8px; padding: .7rem .9rem; background: var(--surface); }
+.rating-good { border-left-color: var(--success); }
+.rating-ok { border-left-color: var(--warn); }
+.rating-weak { border-left-color: var(--danger); background: var(--danger-soft); }
+.rating-head { font-size: .95rem; }
+.rating-icon { margin-right: .25rem; }
+.rating-reasons { margin: .4rem 0 0; padding-left: 1.1rem; font-size: .85rem; color: var(--muted); }
+.rating-reasons:empty { display: none; }
+.rating-reasons li { margin-bottom: .15rem; }
+.rating-reasons .lvl-weak { color: var(--danger); }
+.rating-reasons .lvl-ok { color: var(--warn); }
+
+/* --- Robustesse du mot de passe --- */
+.pw-meter { display: flex; flex-direction: column; gap: .25rem; }
+.pw-bar { height: 5px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.pw-bar span { display: block; height: 100%; width: 0; background: var(--muted); transition: width .2s; }
+.pw-weak .pw-bar span { background: var(--danger); }
+.pw-ok .pw-bar span { background: var(--warn); }
+.pw-good .pw-bar span { background: var(--success); }
+.pw-weak .pw-text { color: var(--danger); }
+.pw-text:empty { display: none; }
+
+/* --- Divers formulaires --- */
+.stack { display: flex; flex-direction: column; gap: 1.25rem; }
+.card-details > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: .5rem; }
+.card-details > summary::-webkit-details-marker { display: none; }
+.card-details > summary::before { content: "▸"; color: var(--muted); }
+.card-details[open] > summary::before { content: "▾"; }
+.card-details > summary h2 { margin: 0; }
+.card-details[open] > summary { margin-bottom: 1rem; }
+.form label.check { flex-direction: row; align-items: center; gap: .5rem; font-weight: 500; }
+.check input { width: 1.05rem; height: 1.05rem; accent-color: var(--primary); }
+fieldset.extra-password { border: 0; border-left: 2px solid var(--primary-soft); margin: 0; padding: 0 0 0 .9rem; display: flex; flex-direction: column; gap: 1rem; }
+fieldset.extra-password[hidden] { display: none; }
+.optional { color: var(--muted); font-weight: 400; font-size: .85rem; }
+.btn-ghost { border-color: transparent; background: transparent; color: var(--muted); }
+.btn-ghost:hover { background: var(--bg); color: var(--text); border-color: transparent; }
+.rename-form { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+.rename-form input[type=text] { flex: 1 1 7rem; min-width: 0; width: auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.key-actions form { display: inline; }
+.pw-meter:not(.pw-weak):not(.pw-ok):not(.pw-good) .pw-bar { display: none; }

@@ -52,8 +52,8 @@ def post(client, path, data=None, files=None, page=None):
     return client.post(path, data=data, content_type="multipart/form-data")
 
 
-def make_identity(client, name="Perso", key_type="x25519", pw=PW):
-    return post(client, "/cles", {"name": name, "key_type": key_type,
+def make_identity(client, name="Perso", key_type="x25519", pw=PW, kdf="argon2id"):
+    return post(client, "/cles", {"name": name, "key_type": key_type, "kdf": kdf,
                                   "password": pw, "password2": pw})
 
 
