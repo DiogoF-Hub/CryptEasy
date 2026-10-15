@@ -28,7 +28,11 @@
       <a href="{{ url_for('keys.index') }}" {% if bp == 'keys' %}aria-current="page"{% endif %}>Mes clés</a>
       <a href="{{ url_for('contacts.index') }}" {% if bp == 'contacts' %}aria-current="page"{% endif %}>Contacts</a>
       <a href="{{ url_for('home.info') }}" {% if request.endpoint == 'home.info' %}aria-current="page"{% endif %}>Info</a>
-      {% block nav_extra %}{% endblock %}
+      <form method="post" action="{{ url_for('app_control.quit_app') }}" class="quit-form"
+            data-confirm="Quitter CryptEasy ?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="quit-btn" title="Fermer l'application">Quitter</button>
+      </form>
     </nav>
   </header>
   {% endif %}

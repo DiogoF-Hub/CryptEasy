@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import Callable
+from pathlib import Path
 
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFError
-
-from pathlib import Path
-
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from .backend import Backend, default_backend
@@ -21,7 +20,8 @@ MAX_UPLOAD_BYTES = 4 * 1024**3   # 4 Gio
 
 
 def create_app(backend: Backend | None = None, *, port: int | None = None,
-               launch_token: str | None = None, temp_root: Path | None = None) -> Flask:
+               launch_token: str | None = None, temp_root: Path | None = None,
+               shutdown: Callable[[], None] | None = None) -> Flask:
     """Fabrique de l'application.
 
     backend=None → backend par défaut (voir backend.default_backend) ; les tests passent un FakeBackend.
@@ -31,15 +31,17 @@ def create_app(backend: Backend | None = None, *, port: int | None = None,
                    lisible dans app.config["LAUNCH_TOKEN"]).
     temp_root    → dossier des fichiers temporaires (défaut : $CRYPTEASY_HOME/tmp,
                    sinon le dossier temporaire du système).
+    shutdown     → appelé par le bouton « Quitter » (fourni par __main__.py ; rien en test).
     """
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
     app.extensions["crypteasy_backend"] = backend or default_backend()
+    app.extensions["crypteasy_shutdown"] = shutdown or (lambda: None)
     init_security(app, port=port, launch_token=launch_token or secrets.token_urlsafe(32))
     init_files(app, temp_root)
 
-    from .routes import contacts, decrypt, encrypt, home, keys
-    for module in (home, keys, contacts, encrypt, decrypt):
+    from .routes import app_control, contacts, decrypt, encrypt, home, keys
+    for module in (home, keys, contacts, encrypt, decrypt, app_control):
         app.register_blueprint(module.bp)
 
     @app.context_processor
