@@ -327,3 +327,5 @@ cython_debug/
 #.idea/
 
 Resources/
+claude.txt
+CLAUDE.md
