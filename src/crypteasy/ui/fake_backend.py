@@ -6,6 +6,7 @@ F7 soient testables : paquet .zip (manifest.json, key.enc, file.enc), empreinte
 du destinataire dans le manifest, mot de passe supplémentaire, détection de
 modification, nom d'origine caché dans file.enc et assaini au déchiffrement.
 """
+
 from __future__ import annotations
 
 import base64
@@ -15,29 +16,33 @@ import json
 import os
 import struct
 import zipfile
-from pathlib import Path
 
 from . import errors
 from .backend import KeyView
 from .files import safe_filename
 from .security_levels import CIPHERS, KDF_STRENGTHS, KDFS, KEY_TYPES, EncryptOptions
 
-_PUB = ("-----BEGIN CRYPTEASY DEMO PUBLIC KEY-----\n", "\n-----END CRYPTEASY DEMO PUBLIC KEY-----\n")
-_PRIV = ("-----BEGIN CRYPTEASY DEMO ENCRYPTED PRIVATE KEY-----\n",
-         "\n-----END CRYPTEASY DEMO ENCRYPTED PRIVATE KEY-----\n")
+_PUB = (
+    "-----BEGIN CRYPTEASY DEMO PUBLIC KEY-----\n",
+    "\n-----END CRYPTEASY DEMO PUBLIC KEY-----\n",
+)
+_PRIV = (
+    "-----BEGIN CRYPTEASY DEMO ENCRYPTED PRIVATE KEY-----\n",
+    "\n-----END CRYPTEASY DEMO ENCRYPTED PRIVATE KEY-----\n",
+)
 _NAMES = {"manifest.json", "key.enc", "file.enc"}
 _CHUNK = 64 * 1024
-_MAX_SMALL = 64 * 1024          # manifest.json et key.enc
+_MAX_SMALL = 64 * 1024  # manifest.json et key.enc
 _BLOCKLIST = {"motdepasse123", "password1234", "azertyuiop12", "123456789012"}
 
 
 def _kind(key_type: str) -> str:
-    return key_type.upper()     # "x25519" → "X25519", "rsa-3072" → "RSA-3072"
+    return key_type.upper()  # "x25519" → "X25519", "rsa-3072" → "RSA-3072"
 
 
 def _fingerprint(key_id: bytes) -> str:
     h = hashlib.sha256(key_id).hexdigest().upper()
-    return " ".join(h[i:i + 4] for i in range(0, 64, 4))      # 16 groupes de 4 (§ 6.3)
+    return " ".join(h[i : i + 4] for i in range(0, 64, 4))  # 16 groupes de 4 (§ 6.3)
 
 
 def _wrap(markers, obj: dict) -> bytes:
@@ -49,14 +54,20 @@ def _unwrap(markers, pem: bytes, err: type[errors.UIError]) -> dict:
     if not (text.startswith(markers[0]) and text.endswith(markers[1])):
         raise err()
     try:
-        return json.loads(base64.b64decode(text[len(markers[0]):-len(markers[1])], validate=True))
+        return json.loads(base64.b64decode(text[len(markers[0]) : -len(markers[1])], validate=True))
     except (ValueError, TypeError) as exc:
         raise err() from exc
 
 
 class _Identity:
     def __init__(self, name: str, key_type: str, key_id: bytes, salt: bytes, pw_hash: bytes):
-        self.name, self.key_type, self.key_id, self.salt, self.pw_hash = name, key_type, key_id, salt, pw_hash
+        self.name, self.key_type, self.key_id, self.salt, self.pw_hash = (
+            name,
+            key_type,
+            key_id,
+            salt,
+            pw_hash,
+        )
 
     def check(self, password: bytes) -> None:
         if not hmac.compare_digest(hashlib.sha256(self.salt + password).digest(), self.pw_hash):
@@ -66,26 +77,38 @@ class _Identity:
         return KeyView(self.name, _kind(self.key_type), _fingerprint(self.key_id))
 
     def private_pem(self) -> bytes:
-        return _wrap(_PRIV, {"id": self.key_id.hex(), "type": self.key_type,
-                             "salt": self.salt.hex(), "pw": self.pw_hash.hex()})
+        return _wrap(
+            _PRIV,
+            {
+                "id": self.key_id.hex(),
+                "type": self.key_type,
+                "salt": self.salt.hex(),
+                "pw": self.pw_hash.hex(),
+            },
+        )
 
     @classmethod
-    def from_private_pem(cls, name: str, pem: bytes) -> "_Identity":
+    def from_private_pem(cls, name: str, pem: bytes) -> _Identity:
         d = _unwrap(_PRIV, pem, errors.InvalidPrivateKey)
         try:
-            return cls(name, d["type"], bytes.fromhex(d["id"]), bytes.fromhex(d["salt"]),
-                       bytes.fromhex(d["pw"]))
+            return cls(
+                name,
+                d["type"],
+                bytes.fromhex(d["id"]),
+                bytes.fromhex(d["salt"]),
+                bytes.fromhex(d["pw"]),
+            )
         except (KeyError, ValueError) as exc:
             raise errors.InvalidPrivateKey() from exc
 
 
 class FakeBackend:
     demo = True
-    min_password_length = 12                        # D5
-    key_protection_kdfs = dict(KDFS)                # D4 pas encore tranchée : on propose le choix
+    min_password_length = 12  # D5
+    key_protection_kdfs = dict(KDFS)  # D4 pas encore tranchée : on propose le choix
 
     def __init__(self) -> None:
-        self._identities: dict[str, _Identity] = {}            # empreinte → identité
+        self._identities: dict[str, _Identity] = {}  # empreinte → identité
         self._contacts: dict[str, tuple[str, str, bytes]] = {}  # empreinte → (nom, type, pem)
 
     # ------------------------------------------------------------ mots de passe
@@ -93,7 +116,8 @@ class FakeBackend:
         text = password.decode("utf-8", "replace")
         if len(text) < self.min_password_length:
             raise errors.WeakPassword(
-                f"Le mot de passe doit faire au moins {self.min_password_length} caractères.")
+                f"Le mot de passe doit faire au moins {self.min_password_length} caractères."
+            )
         if text.lower() in _BLOCKLIST:
             raise errors.WeakPassword("Ce mot de passe est trop courant.")
 
@@ -113,7 +137,9 @@ class FakeBackend:
         self._check_new_password(password)
         self._check_new_name(name)
         salt = os.urandom(16)
-        ident = _Identity(name, key_type, os.urandom(16), salt, hashlib.sha256(salt + password).digest())
+        ident = _Identity(
+            name, key_type, os.urandom(16), salt, hashlib.sha256(salt + password).digest()
+        )
         self._identities[ident.view().fingerprint] = ident
         return ident.view()
 
@@ -124,7 +150,8 @@ class FakeBackend:
         fpr = ident.view().fingerprint
         if fpr in self._identities:
             raise errors.AlreadyExists(
-                f"Cette clé est déjà enregistrée (« {self._identities[fpr].name} »).")
+                f"Cette clé est déjà enregistrée (« {self._identities[fpr].name} »)."
+            )
         self._identities[fpr] = ident
         return ident.view()
 
@@ -146,8 +173,10 @@ class FakeBackend:
 
     # ------------------------------------------------------------ contacts
     def list_contacts(self):
-        return sorted((KeyView(n, _kind(t), fpr) for fpr, (n, t, _p) in self._contacts.items()),
-                      key=lambda v: v.name.lower())
+        return sorted(
+            (KeyView(n, _kind(t), fpr) for fpr, (n, t, _p) in self._contacts.items()),
+            key=lambda v: v.name.lower(),
+        )
 
     def add_contact(self, name, public_pem):
         d = _unwrap(_PUB, public_pem, errors.InvalidKey)
@@ -156,7 +185,8 @@ class FakeBackend:
         fpr = _fingerprint(bytes.fromhex(d["id"]))
         if fpr in self._contacts:
             raise errors.AlreadyExists(
-                f"Cette clé est déjà enregistrée (contact « {self._contacts[fpr][0]} »).")
+                f"Cette clé est déjà enregistrée (contact « {self._contacts[fpr][0]} »)."
+            )
         self._contacts[fpr] = (name, d["type"], public_pem)
         return KeyView(name, _kind(d["type"]), fpr)
 
@@ -181,8 +211,12 @@ class FakeBackend:
 
     def encrypt_file(self, src, dst, recipient_fingerprint, options: EncryptOptions):
         key_id, key_type = self._recipient(recipient_fingerprint)
-        if options.cipher not in CIPHERS or options.kdf not in KDFS \
-                or options.kdf_strength not in KDF_STRENGTHS or options.salt_len not in (0, 16, 32):
+        if (
+            options.cipher not in CIPHERS
+            or options.kdf not in KDFS
+            or options.kdf_strength not in KDF_STRENGTHS
+            or options.salt_len not in (0, 16, 32)
+        ):
             raise errors.BadInput("Réglage de sécurité inconnu.")
         if options.password is not None and options.salt_len == 0 and options.kdf == "argon2id":
             raise errors.BadInput("Argon2id exige un sel.")
@@ -192,15 +226,27 @@ class FakeBackend:
         if options.password is not None:
             salt = os.urandom(options.salt_len)
             pw_check = hashlib.sha256(salt + options.password).hexdigest()
-            password_info = {"kdf": options.kdf, "salt": base64.b64encode(salt).decode() or None,
-                             "params": {"preset": options.kdf_strength}}
-        manifest = json.dumps({
-            "format": "crypteasy", "version": 1, "demo": True,
-            "key_type": key_type,
-            "key_wrap": "rsa-oaep-sha256" if key_type.startswith("rsa") else "x25519-hkdf-sha256",
-            "recipient_fingerprint": _fingerprint(key_id),
-            "cipher": options.cipher, "chunk_size": _CHUNK, "password": password_info,
-        }, indent=2).encode()
+            password_info = {
+                "kdf": options.kdf,
+                "salt": base64.b64encode(salt).decode() or None,
+                "params": {"preset": options.kdf_strength},
+            }
+        manifest = json.dumps(
+            {
+                "format": "crypteasy",
+                "version": 1,
+                "demo": True,
+                "key_type": key_type,
+                "key_wrap": "rsa-oaep-sha256"
+                if key_type.startswith("rsa")
+                else "x25519-hkdf-sha256",
+                "recipient_fingerprint": _fingerprint(key_id),
+                "cipher": options.cipher,
+                "chunk_size": _CHUNK,
+                "password": password_info,
+            },
+            indent=2,
+        ).encode()
         key_enc = json.dumps({"key_id": key_id.hex(), "pw_check": pw_check}).encode()
 
         name = src.name.encode("utf-8")
@@ -218,12 +264,22 @@ class FakeBackend:
                 out.write(mac.digest())
 
     # ------------------------------------------------------------ déchiffrer (§ 5.3)
-    def decrypt_file(self, src, out_dir, *, key_password, file_password=None,
-                     identity_fingerprint=None, private_pem=None):
+    def decrypt_file(
+        self,
+        src,
+        out_dir,
+        *,
+        key_password,
+        file_password=None,
+        identity_fingerprint=None,
+        private_pem=None,
+    ):
         # Quelle clé ? (enregistrée, ou importée pour cette fois)
         if private_pem is not None:
             ident = _Identity.from_private_pem("importée", private_pem)
-            ident.check(key_password)        # une clé importée doit être ouverte pour connaître son empreinte
+            ident.check(
+                key_password
+            )  # une clé importée doit être ouverte pour connaître son empreinte
         else:
             ident = self._identity(identity_fingerprint or "")
 
@@ -239,7 +295,10 @@ class FakeBackend:
             infos = {i.filename: i for i in zf.infolist()}
             if set(infos) != _NAMES or len(zf.infolist()) != 3:
                 raise errors.UnsupportedFormat()
-            if infos["manifest.json"].file_size > _MAX_SMALL or infos["key.enc"].file_size > _MAX_SMALL:
+            if (
+                infos["manifest.json"].file_size > _MAX_SMALL
+                or infos["key.enc"].file_size > _MAX_SMALL
+            ):
                 raise errors.CorruptedFile()
             # 2. Manifest : format et version connus
             manifest_raw = zf.read("manifest.json")
@@ -294,10 +353,10 @@ class FakeBackend:
                     if not hmac.compare_digest(mac.digest(), fin.read(32)):
                         raise errors.CorruptedFile()
                 complete = True
-            except zipfile.BadZipFile as exc:           # CRC zip faux, etc.
+            except zipfile.BadZipFile as exc:  # CRC zip faux, etc.
                 raise errors.CorruptedFile() from exc
             finally:
-                if not complete:                        # jamais de déchiffré partiel sur le disque
+                if not complete:  # jamais de déchiffré partiel sur le disque
                     tmp.unlink(missing_ok=True)
             # 8. Nom d'origine assaini (§ 8), repli « decrypted_file », jamais d'écrasement
             final = out_dir / _safe_original_name(raw_name)

@@ -8,6 +8,7 @@ Contrat de lancement (IMPLEMENTATION.md § 3), partagé avec Track D :
   - Quitter : fermer la console (a) OU bouton « Quitter » de l'interface (b)
 Serveur : waitress (pas le serveur de développement de Flask).
 """
+
 from __future__ import annotations
 
 import logging
@@ -22,12 +23,13 @@ from waitress import create_server
 from crypteasy.ui import MAX_UPLOAD_BYTES, create_app
 from crypteasy.ui.files import remove_run_dir
 
-HOST = "127.0.0.1"   # NE JAMAIS CHANGER (§ 6) : une PR qui modifie ceci doit être refusée
+HOST = "127.0.0.1"  # NE JAMAIS CHANGER (§ 6) : une PR qui modifie ceci doit être refusée
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.WARNING, stream=sys.stderr,
-                        format="%(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.WARNING, stream=sys.stderr, format="%(levelname)s %(name)s: %(message)s"
+    )
     token = secrets.token_urlsafe(32)
     app = None
 
@@ -36,8 +38,11 @@ def main() -> None:
     # qui a besoin du port pour le contrôle du Host, est branchée juste après.
     server = create_server(
         lambda environ, start_response: app(environ, start_response),
-        host=HOST, port=0, threads=4,
-        max_request_body_size=MAX_UPLOAD_BYTES + 1024**2,   # marge multipart ; Flask renvoie le 413 lisible
+        host=HOST,
+        port=0,
+        threads=4,
+        max_request_body_size=MAX_UPLOAD_BYTES
+        + 1024**2,  # marge multipart ; Flask renvoie le 413 lisible
     )
     port = server.effective_port
 
@@ -45,15 +50,19 @@ def main() -> None:
         def stop() -> None:
             remove_run_dir(app)
             os._exit(0)
-        threading.Timer(0.5, stop).start()   # laisse partir la page « CryptEasy est fermé »
+
+        threading.Timer(0.5, stop).start()  # laisse partir la page « CryptEasy est fermé »
 
     app = create_app(port=port, launch_token=token, shutdown=shutdown)
 
     url = f"http://{HOST}:{port}/?token={token}"
     print(f"CRYPTEASY_URL={url}", flush=True)
-    print("CryptEasy est ouvert dans votre navigateur.\n"
-          "Pour quitter : bouton « Quitter » de l'interface, ou fermez cette fenêtre.",
-          file=sys.stderr, flush=True)
+    print(
+        "CryptEasy est ouvert dans votre navigateur.\n"
+        "Pour quitter : bouton « Quitter » de l'interface, ou fermez cette fenêtre.",
+        file=sys.stderr,
+        flush=True,
+    )
 
     if os.environ.get("CRYPTEASY_NO_BROWSER") != "1":
         threading.Timer(0.5, webbrowser.open, args=(url,)).start()

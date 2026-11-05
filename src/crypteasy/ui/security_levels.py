@@ -7,6 +7,7 @@ seule sa longueur est évaluée, dans le navigateur.
 
 À faire relire par Member 1 (crypto) : ce sont des jugements de sécurité.
 """
+
 from __future__ import annotations
 
 import json
@@ -31,20 +32,23 @@ DEFAULT_KDF = "argon2id"
 KDF_STRENGTHS = {"normal": "Normal (~0,5 s)", "fort": "Fort (~1 s)", "max": "Maximum (~3 s)"}
 DEFAULT_KDF_STRENGTH = "normal"
 
-SALT_LENGTHS = {"16": "16 octets (recommandé)", "32": "32 octets",
-                "0": "Aucun sel (déconseillé, PBKDF2 uniquement)"}
+SALT_LENGTHS = {
+    "16": "16 octets (recommandé)",
+    "32": "32 octets",
+    "0": "Aucun sel (déconseillé, PBKDF2 uniquement)",
+}
 DEFAULT_SALT = "16"
 
-MIN_PASSWORD_LENGTH = 12   # D5
+MIN_PASSWORD_LENGTH = 12  # D5
 
 
 @dataclass(frozen=True)
 class EncryptOptions:
     cipher: str = DEFAULT_CIPHER
-    password: bytes | None = None        # mot de passe supplémentaire ; None = désactivé
+    password: bytes | None = None  # mot de passe supplémentaire ; None = désactivé
     kdf: str = DEFAULT_KDF
     kdf_strength: str = DEFAULT_KDF_STRENGTH
-    salt_len: int = 16                   # 0 = sans sel (PBKDF2 uniquement, D3)
+    salt_len: int = 16  # 0 = sans sel (PBKDF2 uniquement, D3)
 
 
 # ------------------------------------------------------------------ niveaux
@@ -62,15 +66,27 @@ RULES: dict[str, dict[str, tuple[str, str]]] = {
         "x25519": (GOOD, "X25519 : courbe elliptique moderne, rapide et sûre."),
         "rsa-4096": (GOOD, "RSA 4096 bits : très solide, mais lent à générer."),
         "rsa-3072": (GOOD, "RSA 3072 bits : niveau recommandé pour RSA (128 bits de sécurité)."),
-        "rsa-2048": (OK, "RSA 2048 bits : encore acceptable, mais en fin de vie (112 bits de sécurité)."),
+        "rsa-2048": (
+            OK,
+            "RSA 2048 bits : encore acceptable, mais en fin de vie (112 bits de sécurité).",
+        ),
     },
     "cipher": {
         "aes-256-gcm": (GOOD, "AES-256-GCM : chiffre le fichier et détecte toute modification."),
-        "aes-128-gcm": (OK, "AES-128-GCM : sûr aussi, avec une marge de sécurité plus faible qu'AES-256."),
+        "aes-128-gcm": (
+            OK,
+            "AES-128-GCM : sûr aussi, avec une marge de sécurité plus faible qu'AES-256.",
+        ),
     },
     "kdf": {
-        "argon2id": (GOOD, "Argon2id : coûteux en mémoire, résiste aux attaques par carte graphique."),
-        "pbkdf2-sha256": (OK, "PBKDF2 : correct, mais plus facile à attaquer sur carte graphique qu'Argon2id."),
+        "argon2id": (
+            GOOD,
+            "Argon2id : coûteux en mémoire, résiste aux attaques par carte graphique.",
+        ),
+        "pbkdf2-sha256": (
+            OK,
+            "PBKDF2 : correct, mais plus facile à attaquer sur carte graphique qu'Argon2id.",
+        ),
     },
     "kdf_strength": {
         "normal": (GOOD, "Force normale : bon compromis entre rapidité et résistance."),
@@ -80,16 +96,22 @@ RULES: dict[str, dict[str, tuple[str, str]]] = {
     "salt": {
         "16": (GOOD, "Sel de 16 octets : empêche les attaques précalculées."),
         "32": (GOOD, "Sel de 32 octets : même protection, un peu plus de marge."),
-        "0": (WEAK, "Sans sel : un attaquant peut précalculer ses essais une fois pour tous les fichiers."),
+        "0": (
+            WEAK,
+            "Sans sel : un attaquant peut précalculer ses essais une fois pour tous les fichiers.",
+        ),
     },
 }
-SHORT_PASSWORD = (WEAK, f"Mot de passe de moins de {MIN_PASSWORD_LENGTH} caractères : facile à deviner.")
+SHORT_PASSWORD = (
+    WEAK,
+    f"Mot de passe de moins de {MIN_PASSWORD_LENGTH} caractères : facile à deviner.",
+)
 
 
 @dataclass(frozen=True)
 class Rating:
     level: str
-    reasons: list[tuple[str, str]]   # (niveau, explication), une ligne par réglage
+    reasons: list[tuple[str, str]]  # (niveau, explication), une ligne par réglage
 
     @property
     def icon(self) -> str:
@@ -109,5 +131,12 @@ def rate(choices: dict[str, str]) -> Rating:
 
 def rules_json() -> str:
     """Règles transmises à la page pour l'indicateur en direct (static/app.js)."""
-    return json.dumps({"levels": LEVELS, "rules": RULES, "minPassword": MIN_PASSWORD_LENGTH,
-                       "shortPassword": SHORT_PASSWORD}, ensure_ascii=False)
+    return json.dumps(
+        {
+            "levels": LEVELS,
+            "rules": RULES,
+            "minPassword": MIN_PASSWORD_LENGTH,
+            "shortPassword": SHORT_PASSWORD,
+        },
+        ensure_ascii=False,
+    )

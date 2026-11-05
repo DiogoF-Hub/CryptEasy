@@ -6,6 +6,7 @@ Les routes n'attrapent jamais les exceptions de core/ ou keystore/ directement :
 ui/backend.py les convertit en exceptions ci-dessous, les routes affichent
 user_message(exc).
 """
+
 from __future__ import annotations
 
 import logging
@@ -17,6 +18,7 @@ UNEXPECTED = "Erreur inattendue. Réessayez ; si le problème persiste, signalez
 
 class UIError(Exception):
     """Erreur dont le message peut être montré tel quel à l'utilisateur."""
+
     default = "Opération impossible."
 
     def __init__(self, message: str | None = None) -> None:
@@ -36,8 +38,10 @@ class WrongFilePassword(UIError):
 
 
 class FilePasswordRequired(UIError):
-    default = ("Ce fichier est protégé par un mot de passe supplémentaire : "
-               "saisissez-le dans « Mot de passe du fichier ».")
+    default = (
+        "Ce fichier est protégé par un mot de passe supplémentaire : "
+        "saisissez-le dans « Mot de passe du fichier »."
+    )
 
 
 class CorruptedFile(UIError):
@@ -45,8 +49,7 @@ class CorruptedFile(UIError):
 
 
 class UnsupportedFormat(UIError):
-    default = ("Ce n'est pas un fichier CryptEasy, "
-               "ou il a été créé par une version plus récente.")
+    default = "Ce n'est pas un fichier CryptEasy, ou il a été créé par une version plus récente."
 
 
 class InvalidKey(UIError):
@@ -71,6 +74,7 @@ class WeakPassword(UIError):
 
 class BadInput(UIError):
     """Formulaire mal rempli (champ vide, nom invalide…)."""
+
     default = "Formulaire incomplet."
 
 

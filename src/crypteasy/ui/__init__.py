@@ -1,4 +1,5 @@
 """Interface web locale de CryptEasy (Track B)."""
+
 from __future__ import annotations
 
 import secrets
@@ -16,15 +17,21 @@ from .security import init_security
 # Taille maximale d'un envoi. Choix délibéré (fiche Track B, S7 point 2) : le moteur
 # travaille par blocs, la limite sert surtout à éviter de remplir le disque par erreur.
 # À valider à MS0 ; le serveur waitress reçoit la même valeur (voir __main__.py).
-MAX_UPLOAD_BYTES = 4 * 1024**3   # 4 Gio
+MAX_UPLOAD_BYTES = 4 * 1024**3  # 4 Gio
 
 
-def create_app(backend: Backend | None = None, *, port: int | None = None,
-               launch_token: str | None = None, temp_root: Path | None = None,
-               shutdown: Callable[[], None] | None = None) -> Flask:
+def create_app(
+    backend: Backend | None = None,
+    *,
+    port: int | None = None,
+    launch_token: str | None = None,
+    temp_root: Path | None = None,
+    shutdown: Callable[[], None] | None = None,
+) -> Flask:
     """Fabrique de l'application.
 
-    backend=None → backend par défaut (voir backend.default_backend) ; les tests passent un FakeBackend.
+    backend=None → backend par défaut (voir backend.default_backend) ;
+                   les tests passent un FakeBackend.
     port         → port réel d'écoute, utilisé par le contrôle de l'en-tête Host.
                    None = mode test (client Flask, Host « localhost » sans port).
     launch_token → jeton attendu dans ?token= au premier accès (aléatoire si absent,
@@ -41,6 +48,7 @@ def create_app(backend: Backend | None = None, *, port: int | None = None,
     init_files(app, temp_root)
 
     from .routes import app_control, contacts, decrypt, encrypt, home, keys
+
     for module in (home, keys, contacts, encrypt, decrypt, app_control):
         app.register_blueprint(module.bp)
 
@@ -50,8 +58,11 @@ def create_app(backend: Backend | None = None, *, port: int | None = None,
 
     @app.errorhandler(CSRFError)
     def csrf_error(_e):
-        return render_template("error.html", code=400,
-                               message="Jeton de sécurité expiré ou absent : rechargez la page."), 400
+        return render_template(
+            "error.html",
+            code=400,
+            message="Jeton de sécurité expiré ou absent : rechargez la page.",
+        ), 400
 
     @app.errorhandler(400)
     def bad_request(e):
@@ -59,14 +70,18 @@ def create_app(backend: Backend | None = None, *, port: int | None = None,
 
     @app.errorhandler(403)
     def forbidden(_e):
-        return render_template("error.html", code=403, bare=True,
-                               message="Ouvrez CryptEasy depuis son application, "
-                                       "pas en tapant l'adresse à la main."), 403
+        return render_template(
+            "error.html",
+            code=403,
+            bare=True,
+            message="Ouvrez CryptEasy depuis son application, pas en tapant l'adresse à la main.",
+        ), 403
 
     @app.errorhandler(RequestEntityTooLarge)
     def too_large(_e):
-        return render_template("error.html", code=413,
-                               message="Fichier trop volumineux (4 Gio maximum)."), 413
+        return render_template(
+            "error.html", code=413, message="Fichier trop volumineux (4 Gio maximum)."
+        ), 413
 
     @app.errorhandler(404)
     def not_found(_e):

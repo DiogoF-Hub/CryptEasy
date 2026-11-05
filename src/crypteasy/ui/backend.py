@@ -9,50 +9,54 @@ Choix du backend par défaut (create_app(backend=None)) :
   CRYPTEASY_FAKE_BACKEND=1  → FakeBackend (bandeau « Mode démo »)
   sinon                     → RealBackend
 """
+
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, Protocol
+from typing import Protocol
 
 from . import errors
 from .security_levels import EncryptOptions
-
-# Réexportés pour les routes (les listes de choix vivent dans security_levels.py)
-from .security_levels import DEFAULT_KEY_TYPE, KEY_TYPES  # noqa: F401
 
 
 @dataclass(frozen=True)
 class KeyView:
     """Ce que l'écran affiche d'une clé (à soi ou d'un contact)."""
+
     name: str
-    kind: str          # libellé affiché : "X25519", "RSA-3072"
-    fingerprint: str   # SHA-256 du DER de la clé publique, 16 groupes de 4 hexa (§ 6.3)
+    kind: str  # libellé affiché : "X25519", "RSA-3072"
+    fingerprint: str  # SHA-256 du DER de la clé publique, 16 groupes de 4 hexa (§ 6.3)
 
 
 class Backend(Protocol):
-    demo: bool                        # True → bandeau « Mode démo »
-    min_password_length: int          # D5 ; affiché, la règle est appliquée par le backend
+    demo: bool  # True → bandeau « Mode démo »
+    min_password_length: int  # D5 ; affiché, la règle est appliquée par le backend
     key_protection_kdfs: dict[str, str]
     """KDF proposées pour protéger la clé privée (§ 4, D4). {} = pas de choix
     (ex. si D4 retient BestAvailableEncryption) : le menu n'est pas affiché."""
 
     # ----- Mes clés (F1, F2)
     def list_identities(self) -> list[KeyView]: ...
-    def create_identity(self, name: str, key_type: str, password: bytes,
-                        kdf: str | None = None) -> KeyView:
+    def create_identity(
+        self, name: str, key_type: str, password: bytes, kdf: str | None = None
+    ) -> KeyView:
         """Lève WeakPassword, AlreadyExists, BadInput."""
         ...
+
     def import_private_key(self, name: str, pem: bytes, password: bytes) -> KeyView:
         """PEM chiffré : `password` l'ouvre. PEM non chiffré : `password` devient sa protection.
         Lève InvalidPrivateKey, WrongPassword, WeakPassword, AlreadyExists."""
         ...
+
     def export_public_key(self, fingerprint: str) -> bytes: ...
     def export_private_key(self, fingerprint: str) -> bytes:
         """PEM tel que stocké, donc chiffré. Lève NotFound."""
         ...
+
     def delete_identity(self, fingerprint: str) -> None: ...
 
     # ----- Contacts (F3)
@@ -60,21 +64,31 @@ class Backend(Protocol):
     def add_contact(self, name: str, public_pem: bytes) -> KeyView:
         """Lève InvalidKey, AlreadyExists."""
         ...
+
     def rename_contact(self, fingerprint: str, new_name: str) -> None:
         """Lève NotFound, AlreadyExists."""
         ...
+
     def remove_contact(self, fingerprint: str) -> None: ...
 
     # ----- Fichiers (F4, F5) : chemins, le moteur travaille par blocs
-    def encrypt_file(self, src: Path, dst: Path, recipient_fingerprint: str,
-                     options: EncryptOptions) -> None:
+    def encrypt_file(
+        self, src: Path, dst: Path, recipient_fingerprint: str, options: EncryptOptions
+    ) -> None:
         """Destinataire = un contact OU une de mes clés. Écrit le paquet .zip dans dst.
         Lève NotFound, BadInput."""
         ...
-    def decrypt_file(self, src: Path, out_dir: Path, *, key_password: bytes,
-                     file_password: bytes | None = None,
-                     identity_fingerprint: str | None = None,
-                     private_pem: bytes | None = None) -> Path:
+
+    def decrypt_file(
+        self,
+        src: Path,
+        out_dir: Path,
+        *,
+        key_password: bytes,
+        file_password: bytes | None = None,
+        identity_fingerprint: str | None = None,
+        private_pem: bytes | None = None,
+    ) -> Path:
         """Une de mes clés (identity_fingerprint) OU une clé importée (private_pem).
         Renvoie le fichier déchiffré, nom d'origine assaini (§ 8).
         Lève WrongPassword, WrongRecipient, FilePasswordRequired, WrongFilePassword,
@@ -85,6 +99,7 @@ class Backend(Protocol):
 def default_backend() -> Backend:
     if os.environ.get("CRYPTEASY_FAKE_BACKEND") == "1":
         from .fake_backend import FakeBackend
+
         return FakeBackend()
     return RealBackend()
 
@@ -96,11 +111,17 @@ def default_backend() -> Backend:
 # --------------------------------------------------------------------------- #
 class RealBackend:
     demo = False
-    min_password_length = 12        # D5
-    key_protection_kdfs: dict[str, str] = {}   # à remplir selon D4
+    min_password_length = 12  # D5
+    key_protection_kdfs: dict[str, str] = {}  # à remplir selon D4
 
     def __init__(self) -> None:
-        from crypteasy.core import errors as core_errors
+        try:
+            from crypteasy.core import errors as core_errors
+        except ImportError as exc:
+            raise SystemExit(
+                "CryptEasy : le moteur (src/crypteasy/core) n'est pas encore disponible.\n"
+                "Pour essayer l'interface en attendant : CRYPTEASY_FAKE_BACKEND=1 make run"
+            ) from exc
         self._core_errors = core_errors
 
     @contextmanager
@@ -163,6 +184,14 @@ class RealBackend:
     def encrypt_file(self, src, dst, recipient_fingerprint, options):
         return self._todo("core/hybrid.py + core/package.py")
 
-    def decrypt_file(self, src, out_dir, *, key_password, file_password=None,
-                     identity_fingerprint=None, private_pem=None):
+    def decrypt_file(
+        self,
+        src,
+        out_dir,
+        *,
+        key_password,
+        file_password=None,
+        identity_fingerprint=None,
+        private_pem=None,
+    ):
         return self._todo("core/package.py + core/hybrid.py")

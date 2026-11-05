@@ -5,6 +5,7 @@ Chaque opération travaille dans son propre dossier « job », supprimé :
   - en cas de succès : après l'envoi complet du téléchargement (response.call_on_close).
 Au démarrage, les dossiers laissés par un lancement précédent (plantage) sont effacés.
 """
+
 from __future__ import annotations
 
 import os
@@ -19,10 +20,16 @@ from flask import Flask, current_app
 
 from .errors import BadInput
 
-STALE_AFTER_S = 3600   # dossiers d'un autre lancement plus vieux qu'1 h : restes d'un plantage
+STALE_AFTER_S = 3600  # dossiers d'un autre lancement plus vieux qu'1 h : restes d'un plantage
 _FORBIDDEN = re.compile(r'[<>:"|?*\x00-\x1f\x7f]')
-_WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)),
-                     *(f"LPT{i}" for i in range(1, 10))}
+_WINDOWS_RESERVED = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
 MAX_NAME_BYTES = 255
 
 
@@ -74,7 +81,10 @@ def safe_filename(raw: str | None) -> str:
 
 
 def save_upload(storage, dest_dir: Path) -> Path:
-    """Enregistre le fichier envoyé (par blocs, sans tout charger en mémoire) sous son nom assaini."""
+    """Enregistre le fichier envoyé sous son nom assaini.
+
+    Écriture par blocs : le fichier n'est jamais chargé entier en mémoire.
+    """
     if storage is None or not storage.filename:
         raise BadInput("Choisissez un fichier.")
     dest_dir.mkdir(parents=True, exist_ok=True)

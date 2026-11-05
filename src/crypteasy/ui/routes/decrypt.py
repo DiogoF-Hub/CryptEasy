@@ -1,6 +1,7 @@
 """Écran « Déchiffrer » (F5) : paquet .zip + une de mes clés OU une clé privée .pem
 importée pour l'occasion + mot de passe de la clé (+ mot de passe du fichier si
 l'expéditeur en a mis un) → fichier d'origine."""
+
 from flask import Blueprint, render_template, request
 
 from ..errors import BadInput, user_message
@@ -12,8 +13,12 @@ MAX_KEY_BYTES = 64 * 1024
 
 
 def _page(error=None, status=200):
-    return render_template("decrypt.html", identities=backend().list_identities(),
-                           error=error, selected=request.form.get("identity", "")), status
+    return render_template(
+        "decrypt.html",
+        identities=backend().list_identities(),
+        error=error,
+        selected=request.form.get("identity", ""),
+    ), status
 
 
 @bp.get("")
@@ -40,16 +45,22 @@ def run():
         else:
             identities = backend().list_identities()
             identity = form.get("identity") or (
-                identities[0].fingerprint if len(identities) == 1 else "")
+                identities[0].fingerprint if len(identities) == 1 else ""
+            )
             if not identity:
                 raise BadInput("Choisissez votre clé, ou importez votre clé privée (.pem).")
 
         src = save_upload(request.files.get("file"), job / "in")
         plain = backend().decrypt_file(
-            src, job / "out", key_password=key_password.encode("utf-8"),
-            file_password=file_password, identity_fingerprint=identity, private_pem=private_pem)
+            src,
+            job / "out",
+            key_password=key_password.encode("utf-8"),
+            file_password=file_password,
+            identity_fingerprint=identity,
+            private_pem=private_pem,
+        )
         src.unlink()
         return attachment(plain, plain.name, cleanup=lambda: remove_job(job))
-    except Exception as exc:   # noqa: BLE001
+    except Exception as exc:  # traduit en message par user_message
         remove_job(job)
         return _page(user_message(exc), 400)

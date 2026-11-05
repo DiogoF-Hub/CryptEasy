@@ -1,4 +1,5 @@
 """Middleware § 6 : Host, jeton de lancement, CSRF, cookies, en-têtes (porte MS1)."""
+
 import pytest
 
 from crypteasy.ui import create_app
@@ -49,8 +50,9 @@ def test_fichiers_statiques_publics(anon):
 
 
 # ---------------------------------------------------------------- CSRF
-@pytest.mark.parametrize("path", ["/cles", "/contacts", "/contacts/supprimer",
-                                  "/chiffrer", "/dechiffrer"])
+@pytest.mark.parametrize(
+    "path", ["/cles", "/contacts", "/contacts/supprimer", "/chiffrer", "/dechiffrer"]
+)
 def test_post_sans_csrf_400(client, path):
     r = client.post(path, data={"name": "x"})
     assert r.status_code == 400 and "Jeton de sécurité" in html(r)

@@ -6,6 +6,7 @@ Ordre des contrôles à chaque requête :
   3. jeton CSRF (Flask-WTF) sur chaque POST → 400
 Puis, sur chaque réponse : en-têtes de sécurité.
 """
+
 from __future__ import annotations
 
 import hmac
@@ -20,18 +21,19 @@ csrf = CSRFProtect()
 
 def init_security(app: Flask, *, port: int | None, launch_token: str) -> None:
     app.config.update(
-        SECRET_KEY=secrets.token_bytes(32),     # nouvelle clé à chaque lancement
+        SECRET_KEY=secrets.token_bytes(32),  # nouvelle clé à chaque lancement
         # Les cookies ne tiennent pas compte du port : un nom par port évite qu'une
         # autre appli locale (ou une 2e instance) écrase notre session.
         SESSION_COOKIE_NAME=f"crypteasy_{port or 'test'}",
         SESSION_COOKIE_SAMESITE="Strict",
         SESSION_COOKIE_HTTPONLY=True,
-        WTF_CSRF_TIME_LIMIT=None,               # le jeton vit autant que la session (= le lancement)
+        WTF_CSRF_TIME_LIMIT=None,  # le jeton vit autant que la session (= le lancement)
         LAUNCH_TOKEN=launch_token,
     )
     # port=None : uniquement pour le client de test Flask, qui envoie « localhost » sans port
-    allowed_hosts = ({f"127.0.0.1:{port}", f"localhost:{port}"} if port
-                     else {"127.0.0.1", "localhost"})
+    allowed_hosts = (
+        {f"127.0.0.1:{port}", f"localhost:{port}"} if port else {"127.0.0.1", "localhost"}
+    )
 
     # Enregistrés AVANT CSRFProtect : Flask exécute les before_request dans l'ordre.
     @app.before_request

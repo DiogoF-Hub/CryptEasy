@@ -1,5 +1,6 @@
 """Écrans sur le FakeBackend (SPEC_TECHNIQUE § 3, § 7) : parcours, messages F7,
 fichiers temporaires, noms de fichiers."""
+
 import io
 import json
 import zipfile
@@ -12,6 +13,8 @@ from crypteasy.ui.files import safe_filename
 from .conftest import PW, html, make_identity, post, run_files
 
 FILE_PW = "mot de passe du fichier"
+WRONG_FILE_PW = "faux"
+CHECKED = "1"  # valeur envoyée par une case à cocher
 
 
 @pytest.mark.parametrize("path", ["/", "/cles", "/contacts", "/chiffrer", "/dechiffrer", "/info"])
@@ -31,8 +34,9 @@ def test_creation_x25519_par_defaut(client, backend):
 def test_creation_rsa_et_kdf_en_options_avancees(client, backend, monkeypatch):
     seen = {}
     original = backend.create_identity
-    monkeypatch.setattr(backend, "create_identity",
-                        lambda *a: seen.setdefault("args", a) and original(*a))
+    monkeypatch.setattr(
+        backend, "create_identity", lambda *a: seen.setdefault("args", a) and original(*a)
+    )
     make_identity(client, key_type="rsa-4096", kdf="pbkdf2-sha256")
     assert backend.list_identities()[0].kind == "RSA-4096"
     assert seen["args"][3] == "pbkdf2-sha256"
@@ -44,13 +48,16 @@ def test_plusieurs_paires(client, backend):
     assert [k.name for k in backend.list_identities()] == ["Alice", "Bob"]
 
 
-@pytest.mark.parametrize("data, msg", [
-    ({"name": "A", "password": PW, "password2": PW + "x"}, "ne correspondent pas"),
-    ({"name": "A", "password": "court", "password2": "court"}, "au moins 12"),
-    ({"name": "", "password": PW, "password2": PW}, "obligatoire"),
-    ({"name": "A" * 65, "password": PW, "password2": PW}, "64 caractères"),
-    ({"name": "A", "key_type": "dsa", "password": PW, "password2": PW}, "Type de clé inconnu"),
-])
+@pytest.mark.parametrize(
+    "data, msg",
+    [
+        ({"name": "A", "password": PW, "password2": PW + "x"}, "ne correspondent pas"),
+        ({"name": "A", "password": "court", "password2": "court"}, "au moins 12"),
+        ({"name": "", "password": PW, "password2": PW}, "obligatoire"),
+        ({"name": "A" * 65, "password": PW, "password2": PW}, "64 caractères"),
+        ({"name": "A", "key_type": "dsa", "password": PW, "password2": PW}, "Type de clé inconnu"),
+    ],
+)
 def test_creation_erreurs(client, data, msg):
     r = post(client, "/cles", data)
     assert r.status_code == 400 and msg in html(r)
@@ -70,7 +77,7 @@ def test_mot_de_passe_jamais_renvoye_dans_la_page(client):
 def test_indicateur_sur_l_ecran_des_cles(client):
     page = html(client.get("/cles"))
     assert "Niveau de sécurité" in page and "Recommandé" in page
-    assert 'data-rules="{&#34;levels&#34;' in page          # JSON échappé, attribut intact
+    assert 'data-rules="{&#34;levels&#34;' in page  # JSON échappé, attribut intact
     r = post(client, "/cles", {"name": "", "key_type": "rsa-2048", "password": PW, "password2": PW})
     assert "🟡" in html(r) and "fin de vie" in html(r)
 
@@ -100,20 +107,36 @@ def test_suppression_puis_reimport_de_la_cle_privee(client, backend):
     assert post(client, "/cles/supprimer", {"fingerprint": fpr}, page="/cles").status_code == 302
     assert backend.list_identities() == []
 
-    r = post(client, "/cles/importer", {"name": "Perso", "password": "mauvais"},
-             {"keyfile": (pem, "cle.pem")}, page="/cles")
+    r = post(
+        client,
+        "/cles/importer",
+        {"name": "Perso", "password": "mauvais"},
+        {"keyfile": (pem, "cle.pem")},
+        page="/cles",
+    )
     assert r.status_code == 400 and "Mot de passe incorrect pour cette clé" in html(r)
-    r = post(client, "/cles/importer", {"name": "Perso", "password": PW},
-             {"keyfile": (pem, "cle.pem")}, page="/cles")
+    r = post(
+        client,
+        "/cles/importer",
+        {"name": "Perso", "password": PW},
+        {"keyfile": (pem, "cle.pem")},
+        page="/cles",
+    )
     assert r.status_code == 302 and backend.list_identities()[0].fingerprint == fpr
 
 
-@pytest.mark.parametrize("data, files, msg", [
-    ({"name": "X", "password": PW}, {"keyfile": (b"-----BEGIN PUBLIC KEY-----", "a.pem")},
-     "pas une clé privée valide"),
-    ({"name": "X", "password": PW}, None, "Choisissez le fichier .pem"),
-    ({"name": "X", "password": PW}, {"keyfile": (b"x" * 70_000, "gros.pem")}, "trop gros"),
-])
+@pytest.mark.parametrize(
+    "data, files, msg",
+    [
+        (
+            {"name": "X", "password": PW},
+            {"keyfile": (b"-----BEGIN PUBLIC KEY-----", "a.pem")},
+            "pas une clé privée valide",
+        ),
+        ({"name": "X", "password": PW}, None, "Choisissez le fichier .pem"),
+        ({"name": "X", "password": PW}, {"keyfile": (b"x" * 70_000, "gros.pem")}, "trop gros"),
+    ],
+)
 def test_import_cle_privee_erreurs(client, data, files, msg):
     r = post(client, "/cles/importer", data, files, page="/cles")
     assert r.status_code == 400 and msg in html(r)
@@ -136,11 +159,14 @@ def test_ajout_contact_par_fichier_puis_doublon(client, backend):
     assert r.status_code == 400 and "déjà enregistrée" in html(r)
 
 
-@pytest.mark.parametrize("data, files, msg", [
-    ({"name": "Bob"}, None, "Importez le fichier .pem"),
-    ({"name": "Bob", "keytext": "pas une clé"}, None, "pas une clé publique valide"),
-    ({"name": "Bob"}, {"keyfile": (b"x" * 70_000, "gros.pem")}, "trop gros"),
-])
+@pytest.mark.parametrize(
+    "data, files, msg",
+    [
+        ({"name": "Bob"}, None, "Importez le fichier .pem"),
+        ({"name": "Bob", "keytext": "pas une clé"}, None, "pas une clé publique valide"),
+        ({"name": "Bob"}, {"keyfile": (b"x" * 70_000, "gros.pem")}, "trop gros"),
+    ],
+)
 def test_ajout_contact_erreurs(client, data, files, msg):
     r = post(client, "/contacts", data, files)
     assert r.status_code == 400 and msg in html(r)
@@ -159,8 +185,11 @@ def test_renommer_contact(client, backend):
     post(client, "/contacts", {"name": "Alice", "keytext": pem.decode()})
     fpr = backend.list_contacts()[0].fingerprint
     assert 'name="name" required maxlength="64" value="Alice"' in html(
-        client.get("/contacts", query_string={"renommer": fpr}))
-    r = post(client, "/contacts/renommer", {"fingerprint": fpr, "name": "Alice Martin"}, page="/contacts")
+        client.get("/contacts", query_string={"renommer": fpr})
+    )
+    r = post(
+        client, "/contacts/renommer", {"fingerprint": fpr, "name": "Alice Martin"}, page="/contacts"
+    )
     assert r.status_code == 302 and backend.list_contacts()[0].name == "Alice Martin"
     r = post(client, "/contacts/renommer", {"fingerprint": fpr, "name": "  "}, page="/contacts")
     assert r.status_code == 400 and "obligatoire" in html(r)
@@ -198,20 +227,20 @@ def encrypted(client, recipient, content=b"secret", **options):
 
 
 def test_aller_retour_octet_pour_octet(client, app, moi):
-    content = "Données é€ 🔒".encode() * 50_000            # ~1 Mo, plusieurs blocs
+    content = "Données é€ 🔒".encode() * 50_000  # ~1 Mo, plusieurs blocs
     data, disposition = encrypted(client, moi.fingerprint, content, name="Rapport final é.pdf")
-    assert "encrypted_" in disposition and ".zip" in disposition   # nom neutre (D7)
+    assert "encrypted_" in disposition and ".zip" in disposition  # nom neutre (D7)
     assert "Rapport" not in disposition
-    with zipfile.ZipFile(io.BytesIO(data)) as zf:                  # format § 5.1
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:  # format § 5.1
         assert sorted(zf.namelist()) == ["file.enc", "key.enc", "manifest.json"]
         assert all(i.compress_type == zipfile.ZIP_STORED for i in zf.infolist())
         manifest = json.loads(zf.read("manifest.json"))
     assert manifest["cipher"] == "aes-256-gcm" and manifest["password"] is None
-    assert "Rapport" not in json.dumps(manifest)                   # le nom ne fuit pas
+    assert "Rapport" not in json.dumps(manifest)  # le nom ne fuit pas
     with decrypt(client, data) as r:
         assert r.status_code == 200 and r.data == content
         assert "Rapport%20final%20%C3%A9.pdf" in r.headers["Content-Disposition"]
-    assert run_files(app) == []                                     # rien ne reste sur le disque
+    assert run_files(app) == []  # rien ne reste sur le disque
 
 
 def test_chiffrer_pour_une_de_mes_cles(client, backend):
@@ -228,9 +257,18 @@ def test_nom_choisi_pour_le_paquet(client, moi):
 
 
 def test_mot_de_passe_supplementaire(client, moi):
-    data, _ = encrypted(client, moi.fingerprint, b"double protection", use_password="1",
-                        file_password=FILE_PW, file_password2=FILE_PW, kdf="pbkdf2-sha256",
-                        kdf_strength="fort", salt="32", cipher="aes-128-gcm")
+    data, _ = encrypted(
+        client,
+        moi.fingerprint,
+        b"double protection",
+        use_password=CHECKED,
+        file_password=FILE_PW,
+        file_password2=FILE_PW,
+        kdf="pbkdf2-sha256",
+        kdf_strength="fort",
+        salt="32",
+        cipher="aes-128-gcm",
+    )
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
         m = json.loads(zf.read("manifest.json"))
     assert m["cipher"] == "aes-128-gcm" and m["password"]["kdf"] == "pbkdf2-sha256"
@@ -238,50 +276,67 @@ def test_mot_de_passe_supplementaire(client, moi):
 
     r = decrypt(client, data)
     assert r.status_code == 400 and "mot de passe supplémentaire" in html(r)
-    r = decrypt(client, data, file_password="faux")
+    r = decrypt(client, data, file_password=WRONG_FILE_PW)
     assert r.status_code == 400 and "Mot de passe du fichier incorrect" in html(r)
     with decrypt(client, data, file_password=FILE_PW) as r:
         assert r.status_code == 200 and r.data == b"double protection"
 
 
 def test_sans_sel_autorise_avec_pbkdf2_seulement(client, moi):
-    opts = dict(use_password="1", file_password=FILE_PW, file_password2=FILE_PW, salt="0")
+    opts = dict(use_password=CHECKED, file_password=FILE_PW, file_password2=FILE_PW, salt="0")
     r = encrypt(client, moi.fingerprint, kdf="argon2id", **opts)
     assert r.status_code == 400 and "Argon2id exige un sel" in html(r)
-    assert "🔴" in html(r)                                    # l'indicateur affiche Faible
+    assert "🔴" in html(r)  # l'indicateur affiche Faible
     data, _ = encrypted(client, moi.fingerprint, kdf="pbkdf2-sha256", **opts)
     with decrypt(client, data, file_password=FILE_PW) as r:
         assert r.status_code == 200
 
 
-@pytest.mark.parametrize("options, msg", [
-    ({"use_password": "1"}, "Saisissez le mot de passe supplémentaire"),
-    ({"use_password": "1", "file_password": "a", "file_password2": "b"}, "ne correspondent pas"),
-    ({"cipher": "aes-256-cbc"}, "Réglage de sécurité inconnu"),
-    ({"use_password": "1", "file_password": "a", "file_password2": "a", "kdf": "md5"},
-     "Réglage de sécurité inconnu"),
-])
+@pytest.mark.parametrize(
+    "options, msg",
+    [
+        ({"use_password": "1"}, "Saisissez le mot de passe supplémentaire"),
+        (
+            {"use_password": "1", "file_password": "a", "file_password2": "b"},
+            "ne correspondent pas",
+        ),
+        ({"cipher": "aes-256-cbc"}, "Réglage de sécurité inconnu"),
+        (
+            {"use_password": "1", "file_password": "a", "file_password2": "a", "kdf": "md5"},
+            "Réglage de sécurité inconnu",
+        ),
+    ],
+)
 def test_reglages_invalides(client, moi, options, msg):
     r = encrypt(client, moi.fingerprint, **options)
     assert r.status_code == 400 and msg in html(r)
 
 
 def test_mot_de_passe_du_fichier_jamais_renvoye(client, moi):
-    r = encrypt(client, moi.fingerprint, use_password="1", file_password=FILE_PW, file_password2="x")
+    r = encrypt(
+        client, moi.fingerprint, use_password=CHECKED, file_password=FILE_PW, file_password2="x"
+    )
     assert FILE_PW not in html(r)
 
 
 def test_dechiffrer_avec_cle_pem_importee(client, backend, moi):
     data, _ = encrypted(client, moi.fingerprint, b"via pem")
     pem = backend.export_private_key(moi.fingerprint)
-    r = post(client, "/dechiffrer", {"password": PW},
-             {"file": (data, "x.zip"), "privkey": (pem, "cle.pem")})
+    r = post(
+        client,
+        "/dechiffrer",
+        {"password": PW},
+        {"file": (data, "x.zip"), "privkey": (pem, "cle.pem")},
+    )
     assert r.status_code == 200 and r.data == b"via pem"
 
 
-@pytest.mark.parametrize("password, msg", [
-    ("ce n'est pas le bon", "Mot de passe incorrect pour cette clé"),
-])
+@pytest.mark.parametrize(
+    "password, msg",
+    [
+        ("ce n'est pas le bon", "Mot de passe incorrect pour cette clé"),
+    ],
+)
 def test_mauvais_mot_de_passe_de_cle(client, app, moi, password, msg):
     data, _ = encrypted(client, moi.fingerprint)
     r = decrypt(client, data, password=password)
@@ -307,23 +362,35 @@ def _tamper(data: bytes, member: str, edit) -> bytes:
     return out.getvalue()
 
 
-@pytest.mark.parametrize("member, edit", [
-    ("file.enc", lambda b: b[:-40] + bytes([b[-40] ^ 1]) + b[-39:]),      # 1 bit du contenu
-    ("file.enc", lambda b: b[:-100]),                                       # tronqué
-    ("manifest.json", lambda b: b.replace(b"aes-256-gcm", b"aes-128-gcm")), # réglage modifié
-])
+@pytest.mark.parametrize(
+    "member, edit",
+    [
+        ("file.enc", lambda b: b[:-40] + bytes([b[-40] ^ 1]) + b[-39:]),  # 1 bit du contenu
+        ("file.enc", lambda b: b[:-100]),  # tronqué
+        ("manifest.json", lambda b: b.replace(b"aes-256-gcm", b"aes-128-gcm")),  # réglage modifié
+    ],
+)
 def test_paquet_modifie(client, app, moi, member, edit):
     data, _ = encrypted(client, moi.fingerprint, b"A" * 10_000)
     r = decrypt(client, _tamper(data, member, edit))
     assert r.status_code == 400 and "endommagé ou a été modifié" in html(r)
-    assert run_files(app) == []                                   # pas de déchiffré partiel
+    assert run_files(app) == []  # pas de déchiffré partiel
 
 
-@pytest.mark.parametrize("payload", [
-    b"%PDF-1.7 pas du tout un zip",
-    lambda: _zip({"autre.txt": b"x"}),
-    lambda: _zip({"manifest.json": b'{"format":"crypteasy","version":99}', "key.enc": b"", "file.enc": b""}),
-])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"%PDF-1.7 pas du tout un zip",
+        lambda: _zip({"autre.txt": b"x"}),
+        lambda: _zip(
+            {
+                "manifest.json": b'{"format":"crypteasy","version":99}',
+                "key.enc": b"",
+                "file.enc": b"",
+            }
+        ),
+    ],
+)
 def test_pas_un_paquet_crypteasy(client, moi, payload):
     data = payload() if callable(payload) else payload
     r = decrypt(client, data)
@@ -341,6 +408,7 @@ def _zip(members: dict) -> bytes:
 def test_erreur_imprevue_message_generique(client, app, backend, moi, monkeypatch, caplog):
     def boom(*_a, **_k):
         raise RuntimeError("détail interne secret")
+
     monkeypatch.setattr(backend, "encrypt_file", boom)
     r = encrypt(client, moi.fingerprint)
     assert r.status_code == 400 and "Erreur inattendue" in html(r)
@@ -349,12 +417,15 @@ def test_erreur_imprevue_message_generique(client, app, backend, moi, monkeypatc
     assert run_files(app) == []
 
 
-@pytest.mark.parametrize("path, data, files, msg", [
-    ("/chiffrer", {"recipient": ""}, {"file": (b"x", "a")}, "Choisissez un destinataire"),
-    ("/chiffrer", {"recipient": "inconnu"}, {"file": (b"x", "a")}, "Destinataire introuvable"),
-    ("/chiffrer", {"recipient": "x"}, None, "Choisissez un fichier"),
-    ("/dechiffrer", {"password": ""}, {"file": (b"x", "a")}, "Saisissez le mot de passe"),
-])
+@pytest.mark.parametrize(
+    "path, data, files, msg",
+    [
+        ("/chiffrer", {"recipient": ""}, {"file": (b"x", "a")}, "Choisissez un destinataire"),
+        ("/chiffrer", {"recipient": "inconnu"}, {"file": (b"x", "a")}, "Destinataire introuvable"),
+        ("/chiffrer", {"recipient": "x"}, None, "Choisissez un fichier"),
+        ("/dechiffrer", {"password": ""}, {"file": (b"x", "a")}, "Saisissez le mot de passe"),
+    ],
+)
 def test_formulaires_incomplets(client, moi, path, data, files, msg):
     r = post(client, path, data, files)
     assert r.status_code == 400 and msg in html(r)
@@ -379,20 +450,28 @@ def test_contact_preselectionne_et_note(client, moi):
 
 def test_page_info(client):
     page = html(client.get("/info"))
-    for text in ("Chiffrement hybride", "Pourquoi le sel compte", "manifest.json",
-                 "Les réglages de sécurité", "Sauvegardez votre clé privée"):
+    for text in (
+        "Chiffrement hybride",
+        "Pourquoi le sel compte",
+        "manifest.json",
+        "Les réglages de sécurité",
+        "Sauvegardez votre clé privée",
+    ):
         assert text in page
 
 
 # ======================================================================== noms de fichiers
-@pytest.mark.parametrize("raw, expected", [
-    ("rapport.pdf", "rapport.pdf"),
-    ("../../etc/passwd", "passwd"),
-    ("C:\\Users\\x\\secret.txt", "secret.txt"),
-    ('a<b>c:d"e|f?g*h.txt', "a_b_c_d_e_f_g_h.txt"),
-    ("CON.txt", "_CON.txt"),
-    ("été.txt", "été.txt"),
-])
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("rapport.pdf", "rapport.pdf"),
+        ("../../etc/passwd", "passwd"),
+        ("C:\\Users\\x\\secret.txt", "secret.txt"),
+        ('a<b>c:d"e|f?g*h.txt', "a_b_c_d_e_f_g_h.txt"),
+        ("CON.txt", "_CON.txt"),
+        ("été.txt", "été.txt"),
+    ],
+)
 def test_safe_filename(raw, expected):
     assert safe_filename(raw) == expected
 

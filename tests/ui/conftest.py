@@ -1,4 +1,5 @@
 """Outils communs aux tests de l'interface (Track B)."""
+
 import io
 import re
 
@@ -7,7 +8,7 @@ import pytest
 from crypteasy.ui import create_app
 from crypteasy.ui.fake_backend import FakeBackend
 
-TOKEN = "jeton-de-test"
+TOKEN = "jeton-de-test"  # noqa: S105 - faux jeton de lancement, propre aux tests
 PW = "une phrase de passe assez longue"
 
 
@@ -53,8 +54,11 @@ def post(client, path, data=None, files=None, page=None):
 
 
 def make_identity(client, name="Perso", key_type="x25519", pw=PW, kdf="argon2id"):
-    return post(client, "/cles", {"name": name, "key_type": key_type, "kdf": kdf,
-                                  "password": pw, "password2": pw})
+    return post(
+        client,
+        "/cles",
+        {"name": name, "key_type": key_type, "kdf": kdf, "password": pw, "password2": pw},
+    )
 
 
 def html(resp):

@@ -1,4 +1,5 @@
 """Un blueprint par écran. Aucune route n'importe core/ ou keystore/ : tout passe par le Backend."""
+
 from __future__ import annotations
 
 import re
@@ -29,8 +30,14 @@ def clean_label(raw: str | None, what: str = "Le nom") -> str:
 
 def attachment(path_or_file, download_name: str, cleanup=None):
     """Réponse de téléchargement ; `cleanup` est appelé une fois l'envoi terminé."""
-    resp = send_file(path_or_file, as_attachment=True, download_name=download_name,
-                     mimetype="application/octet-stream", conditional=False, etag=False)
+    resp = send_file(
+        path_or_file,
+        as_attachment=True,
+        download_name=download_name,
+        mimetype="application/octet-stream",
+        conditional=False,
+        etag=False,
+    )
     if cleanup is not None:
         # PIÈGE (vérifié) : send_file active direct_passthrough, et Werkzeug renvoie alors
         # le fichier brut au serveur SANS appeler les fonctions call_on_close : le

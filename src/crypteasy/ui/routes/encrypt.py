@@ -3,6 +3,7 @@ réglages de sécurité (§ 4, défaut = recommandé) → téléchargement d'un 
 
 Le paquet porte un nom neutre (D7) : le vrai nom voyage chiffré à l'intérieur.
 """
+
 from datetime import datetime
 
 from flask import Blueprint, render_template, request
@@ -10,8 +11,17 @@ from flask import Blueprint, render_template, request
 from ..errors import BadInput, user_message
 from ..files import new_job, remove_job, safe_filename, save_upload
 from ..security_levels import (
-    CIPHERS, DEFAULT_CIPHER, DEFAULT_KDF, DEFAULT_KDF_STRENGTH, DEFAULT_SALT, KDF_STRENGTHS,
-    KDFS, SALT_LENGTHS, EncryptOptions, rate, rules_json,
+    CIPHERS,
+    DEFAULT_CIPHER,
+    DEFAULT_KDF,
+    DEFAULT_KDF_STRENGTH,
+    DEFAULT_SALT,
+    KDF_STRENGTHS,
+    KDFS,
+    SALT_LENGTHS,
+    EncryptOptions,
+    rate,
+    rules_json,
 )
 from . import attachment, backend
 
@@ -40,25 +50,43 @@ def _rating(form, contacts, identities):
     if recipient in kinds:
         choices["key_type"] = kinds[recipient].lower()
     if form.get("use_password"):
-        choices.update(kdf=form.get("kdf") or DEFAULT_KDF,
-                       kdf_strength=form.get("kdf_strength") or DEFAULT_KDF_STRENGTH,
-                       salt=form.get("salt") or DEFAULT_SALT)
+        choices.update(
+            kdf=form.get("kdf") or DEFAULT_KDF,
+            kdf_strength=form.get("kdf_strength") or DEFAULT_KDF_STRENGTH,
+            salt=form.get("salt") or DEFAULT_SALT,
+        )
     return rate(choices)
 
 
 def _page(error=None, status=200):
     contacts, identities = _recipients()
     form = request.form
-    safe = {k: form.get(k, "") for k in ("recipient", "out_name", "cipher", "use_password",
-                                         "kdf", "kdf_strength", "salt")}
+    safe = {
+        k: form.get(k, "")
+        for k in ("recipient", "out_name", "cipher", "use_password", "kdf", "kdf_strength", "salt")
+    }
     return render_template(
-        "encrypt.html", contacts=contacts, identities=identities, ext=EXT, error=error,
-        selected=form.get("recipient") or request.args.get("contact", ""), form=safe,
-        ciphers=CIPHERS, kdfs=KDFS, kdf_strengths=KDF_STRENGTHS, salts=SALT_LENGTHS,
-        defaults={"cipher": DEFAULT_CIPHER, "kdf": DEFAULT_KDF,
-                  "kdf_strength": DEFAULT_KDF_STRENGTH, "salt": DEFAULT_SALT},
-        rating=_rating(form, contacts, identities), rules=rules_json(),
-        min_pw=backend().min_password_length), status
+        "encrypt.html",
+        contacts=contacts,
+        identities=identities,
+        ext=EXT,
+        error=error,
+        selected=form.get("recipient") or request.args.get("contact", ""),
+        form=safe,
+        ciphers=CIPHERS,
+        kdfs=KDFS,
+        kdf_strengths=KDF_STRENGTHS,
+        salts=SALT_LENGTHS,
+        defaults={
+            "cipher": DEFAULT_CIPHER,
+            "kdf": DEFAULT_KDF,
+            "kdf_strength": DEFAULT_KDF_STRENGTH,
+            "salt": DEFAULT_SALT,
+        },
+        rating=_rating(form, contacts, identities),
+        rules=rules_json(),
+        min_pw=backend().min_password_length,
+    ), status
 
 
 def parse_options(form) -> EncryptOptions:
@@ -81,9 +109,13 @@ def parse_options(form) -> EncryptOptions:
     salt = pick("salt", SALT_LENGTHS, DEFAULT_SALT)
     if salt == "0" and kdf == "argon2id":
         raise BadInput("Argon2id exige un sel : choisissez 16 ou 32 octets, ou PBKDF2.")
-    return EncryptOptions(cipher=cipher, password=password.encode("utf-8"), kdf=kdf,
-                          kdf_strength=pick("kdf_strength", KDF_STRENGTHS, DEFAULT_KDF_STRENGTH),
-                          salt_len=int(salt))
+    return EncryptOptions(
+        cipher=cipher,
+        password=password.encode("utf-8"),
+        kdf=kdf,
+        kdf_strength=pick("kdf_strength", KDF_STRENGTHS, DEFAULT_KDF_STRENGTH),
+        salt_len=int(salt),
+    )
 
 
 @bp.get("")
@@ -104,8 +136,8 @@ def run():
         dst = job / "out" / out_name
         dst.parent.mkdir()
         backend().encrypt_file(src, dst, recipient, options)
-        src.unlink()   # le clair n'a plus rien à faire sur le disque
+        src.unlink()  # le clair n'a plus rien à faire sur le disque
         return attachment(dst, out_name, cleanup=lambda: remove_job(job))
-    except Exception as exc:   # noqa: BLE001
+    except Exception as exc:  # traduit en message par user_message
         remove_job(job)
         return _page(user_message(exc), 400)

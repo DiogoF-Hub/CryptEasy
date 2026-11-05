@@ -1,5 +1,6 @@
 """Écran « Mes clés » (F1, F2) : générer, importer une clé privée, exporter (publique /
 privée), supprimer. Plusieurs paires possibles (D9)."""
+
 import io
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -25,10 +26,19 @@ def _page(error=None, form=None, status=200, open_import=False):
     b = backend()
     form = form or {}
     return render_template(
-        "keys.html", identities=b.list_identities(), key_types=KEY_TYPES,
-        default_type=DEFAULT_KEY_TYPE, kdfs=b.key_protection_kdfs, default_kdf=DEFAULT_KDF,
-        min_pw=b.min_password_length, rating=_rating(form), rules=rules_json(),
-        error=error, form=form, open_import=open_import), status
+        "keys.html",
+        identities=b.list_identities(),
+        key_types=KEY_TYPES,
+        default_type=DEFAULT_KEY_TYPE,
+        kdfs=b.key_protection_kdfs,
+        default_kdf=DEFAULT_KDF,
+        min_pw=b.min_password_length,
+        rating=_rating(form),
+        rules=rules_json(),
+        error=error,
+        form=form,
+        open_import=open_import,
+    ), status
 
 
 def _safe_form(form):
@@ -50,12 +60,16 @@ def create():
         if password != form.get("password2", ""):
             raise BadInput("Les deux mots de passe ne correspondent pas.")
         kdf = form.get("kdf") or None if backend().key_protection_kdfs else None
-        view = backend().create_identity(name, form.get("key_type") or DEFAULT_KEY_TYPE,
-                                         password.encode("utf-8"), kdf)
-    except Exception as exc:   # noqa: BLE001 — traduit en message par user_message
+        view = backend().create_identity(
+            name, form.get("key_type") or DEFAULT_KEY_TYPE, password.encode("utf-8"), kdf
+        )
+    except Exception as exc:  # traduit en message par user_message
         return _page(user_message(exc), _safe_form(form), 400)
-    flash(f"Paire de clés « {view.name} » créée. N'oubliez pas son mot de passe : "
-          "sans lui, impossible de déchiffrer.", "success")
+    flash(
+        f"Paire de clés « {view.name} » créée. N'oubliez pas son mot de passe : "
+        "sans lui, impossible de déchiffrer.",
+        "success",
+    )
     return redirect(url_for("keys.index"))
 
 
@@ -71,9 +85,10 @@ def import_private():
         if len(pem) > MAX_KEY_BYTES:
             raise BadInput("Ce fichier est trop gros pour être une clé privée.")
         view = backend().import_private_key(name, pem, form.get("password", "").encode("utf-8"))
-    except Exception as exc:   # noqa: BLE001
-        return _page(user_message(exc), {"import_name": form.get("name", "")}, 400,
-                     open_import=True)
+    except Exception as exc:  # traduit en message par user_message
+        return _page(
+            user_message(exc), {"import_name": form.get("name", "")}, 400, open_import=True
+        )
     flash(f"Clé « {view.name} » importée.", "success")
     return redirect(url_for("keys.index"))
 
