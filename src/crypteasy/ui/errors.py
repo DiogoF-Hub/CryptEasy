@@ -1,10 +1,9 @@
-"""Erreurs côté interface et LE seul endroit qui les traduit en messages.
-
-Textes repris de SPEC_TECHNIQUE.md, F7.
+"""Erreurs côté interface et LE seul endroit qui les traduit en messages (SPEC § F7).
 
 Les routes n'attrapent jamais les exceptions de core/ ou keystore/ directement :
 ui/backend.py les convertit en exceptions ci-dessous, les routes affichent
-user_message(exc).
+user_message(exc). Chaque erreur porte une CLÉ de traduction (translations/*.json),
+jamais un texte en dur.
 """
 
 from __future__ import annotations
@@ -13,75 +12,86 @@ import logging
 
 log = logging.getLogger(__name__)
 
-UNEXPECTED = "Erreur inattendue. Réessayez ; si le problème persiste, signalez-le."
-
 
 class UIError(Exception):
-    """Erreur dont le message peut être montré tel quel à l'utilisateur."""
+    """Erreur dont le message peut être montré à l'utilisateur.
 
-    default = "Opération impossible."
+    key    : clé de traduction du message
+    params : valeurs insérées dans le message (ex. {"name": "Alice"})
+    """
 
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(message or self.default)
+    key = "error.generic"
 
-
-class WrongPassword(UIError):
-    default = "Mot de passe incorrect pour cette clé."
-
-
-class WrongRecipient(UIError):
-    default = "Ce fichier n'a pas été chiffré pour cette clé."
+    def __init__(self, key: str | None = None, **params: object) -> None:
+        super().__init__(key or self.key)
+        self.key = key or self.key
+        self.params = params
 
 
-class WrongFilePassword(UIError):
-    default = "Mot de passe du fichier incorrect."
+# --- F7 : messages imposés par la spec -----------------------------------------
+class WrongPassphrase(UIError):
+    key = "error.wrong_passphrase"
 
 
-class FilePasswordRequired(UIError):
-    default = (
-        "Ce fichier est protégé par un mot de passe supplémentaire : "
-        "saisissez-le dans « Mot de passe du fichier »."
-    )
+class NoMatchingKey(UIError):
+    key = "error.no_matching_key"
 
 
 class CorruptedFile(UIError):
-    default = "Ce fichier est endommagé ou a été modifié. Rien n'a été déchiffré."
+    key = "error.corrupted"
 
 
 class UnsupportedFormat(UIError):
-    default = "Ce n'est pas un fichier CryptEasy, ou il a été créé par une version plus récente."
+    key = "error.unsupported_format"
 
 
-class InvalidKey(UIError):
-    default = "Ce n'est pas une clé publique valide."
+class InvalidPublicKey(UIError):
+    key = "error.invalid_public_key"
 
 
 class InvalidPrivateKey(UIError):
-    default = "Ce n'est pas une clé privée valide."
+    key = "error.invalid_private_key"
+
+
+class ExtractionTooLarge(UIError):
+    key = "error.extraction_too_large"
+
+
+class UnsafeArchive(UIError):
+    """Dossier déchiffré contenant un chemin dangereux (../, absolu, lien symbolique)."""
+
+    key = "error.unsafe_archive"
+
+
+# --- Autres erreurs de l'interface -----------------------------------------------
+class FileExists(UIError):
+    key = "error.file_exists"
 
 
 class NotFound(UIError):
-    default = "Élément introuvable."
+    key = "error.not_found"
 
 
 class AlreadyExists(UIError):
-    default = "Cet élément existe déjà."
+    key = "error.already_exists"
 
 
-class WeakPassword(UIError):
-    default = "Mot de passe trop faible."
+class WeakPassphrase(UIError):
+    key = "error.passphrase_too_short"
 
 
 class BadInput(UIError):
     """Formulaire mal rempli (champ vide, nom invalide…)."""
 
-    default = "Formulaire incomplet."
+    key = "error.bad_input"
 
 
 def user_message(exc: BaseException) -> str:
-    """Message à afficher. Pour une erreur imprévue : message générique, et on ne
-    journalise que le TYPE (jamais le contenu, qui pourrait contenir des données)."""
+    """Message traduit. Pour une erreur imprévue : message générique, et on ne journalise
+    que le TYPE de l'exception (jamais son contenu, qui pourrait contenir des données)."""
+    from .i18n import t
+
     if isinstance(exc, UIError):
-        return str(exc)
+        return t(exc.key, **exc.params)
     log.error("Erreur inattendue : %s", type(exc).__name__)
-    return UNEXPECTED
+    return t("error.unexpected")

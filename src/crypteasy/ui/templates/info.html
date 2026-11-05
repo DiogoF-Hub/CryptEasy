@@ -1,97 +1,95 @@
 {% extends "base.html" %}
-{% block title %}Comment ça marche{% endblock %}
+{% block title %}{{ t('info.title') }}{% endblock %}
 {% block content %}
-<h1>Comment ça marche</h1>
+<h1>{{ t('info.title') }}</h1>
 
 <div class="info-grid">
   <section class="card">
-    <h2>Deux clés par personne</h2>
-    <p>Chaque utilisateur possède une <strong>paire de clés</strong> :</p>
+    <h2>{{ t('info.keys_title') }}</h2>
+    <p>{{ t('info.keys_intro') }}</p>
     <ul class="info-list">
-      <li><strong>la clé publique</strong> se partage librement : elle sert à vous chiffrer des fichiers ;</li>
-      <li><strong>la clé privée</strong> reste sur votre ordinateur, protégée par votre mot de passe : elle seule permet de déchiffrer.</li>
+      <li><strong>{{ t('info.public_key') }}</strong> {{ t('info.public_key_text') }}</li>
+      <li><strong>{{ t('info.private_key') }}</strong> {{ t('info.private_key_text') }}</li>
     </ul>
-    <p>Vous pouvez avoir plusieurs paires (une par PC, une perso, une pour le travail…).</p>
+    <p>{{ t('info.only_public_shared') }}</p>
   </section>
 
   <section class="card">
-    <h2>Chiffrement hybride</h2>
-    <ol class="flow" aria-label="Étapes du chiffrement">
-      <li><span class="flow-step">1</span><span>Une clé aléatoire de 32 octets est tirée, <em>une par fichier</em>.</span></li>
-      <li><span class="flow-step">2</span><span>Elle est « enveloppée » avec la clé publique du destinataire (RSA-OAEP, ou X25519 + HKDF).</span></li>
-      <li><span class="flow-step">3</span><span>Le fichier est chiffré en AES-GCM par blocs de 64 Kio : chaque bloc est aussi protégé contre la modification.</span></li>
-      <li><span class="flow-step">4</span><span>Pour ouvrir, la clé privée du destinataire désenveloppe la clé du fichier.</span></li>
+    <h2>{{ t('info.hybrid_title') }}</h2>
+    <ol class="flow">
+      {% for n in range(1, 5) %}
+      <li><span class="flow-step">{{ n }}</span><span>{{ t('info.hybrid_step' ~ n) }}</span></li>
+      {% endfor %}
     </ol>
-    <p class="hint">Pourquoi deux étapes ? Le chiffrement à clé publique est lent et limité en taille ; AES est rapide sur de gros fichiers. On combine les deux.</p>
+    <p class="hint">{{ t('info.hybrid_why') }}</p>
   </section>
 </div>
 
 <section class="card">
-  <h2>Les réglages de sécurité</h2>
-  <p>Les réglages par défaut sont les recommandés. Le panneau « avancé » permet de les changer ; l'indicateur 🟢 / 🟡 / 🔴 note votre choix en direct.</p>
+  <h2>{{ t('info.levels_title') }}</h2>
+  <p>{{ t('info.levels_intro') }}</p>
   <div class="table-wrap">
     <table class="format">
-      <thead><tr><th>Réglage</th><th>Ce que ça change</th><th>Par défaut</th></tr></thead>
+      <thead><tr>
+        <th>{{ t('info.col_level') }}</th><th>{{ t('protect.key_type') }}</th><th>{{ t('encrypt.cipher') }}</th>
+        <th>{{ t('protect.kdf') }}</th><th>{{ t('protect.kdf_strength') }}</th><th>{{ t('protect.salt') }}</th>
+        <th>{{ t('protect.passphrase') }}</th>
+      </tr></thead>
       <tbody>
-        <tr><td>Type de clé</td><td>X25519 est une courbe elliptique moderne : courte, rapide, sûre. RSA reste disponible pour la compatibilité ; 3072 bits est le niveau conseillé, 2048 est en fin de vie.</td><td>X25519</td></tr>
-        <tr><td>Chiffrement du fichier</td><td>AES-GCM chiffre <em>et</em> détecte toute modification. AES-256 garde plus de marge qu'AES-128. Pas de mode CBC : il ne détecte pas les modifications.</td><td>AES-256-GCM</td></tr>
-        <tr><td>Mot de passe supplémentaire</td><td>Le destinataire aura besoin de sa clé privée <strong>et</strong> de ce mot de passe. Il est combiné à la clé du fichier, pas simplement chiffré avec elle : sans lui, la clé privée seule ne suffit pas.</td><td>Désactivé</td></tr>
-        <tr><td>KDF</td><td>Transforme un mot de passe en clé, volontairement lentement, pour freiner un attaquant qui essaie des millions de mots de passe. Argon2id consomme aussi de la mémoire, ce qui gêne les cartes graphiques ; PBKDF2 non.</td><td>Argon2id</td></tr>
-        <tr><td>Force de la KDF</td><td>Plus c'est fort, plus chaque essai coûte cher à l'attaquant… et plus vous attendez (de ~0,5 s à ~3 s).</td><td>Normal</td></tr>
-        <tr><td>Sel</td><td>Valeur aléatoire mélangée au mot de passe (voir ci-dessous).</td><td>16 octets</td></tr>
+        <tr><td>{{ icons.very_strong }} {{ t('level.very_strong') }}</td><td>X25519 / RSA-4096</td><td>AES-256-GCM</td><td>Argon2id</td><td>{{ t('option.kdf_strength.max') }}</td><td>32</td><td>16+</td></tr>
+        <tr><td>{{ icons.strong }} {{ t('level.strong') }}</td><td>X25519 / RSA-3072</td><td>AES-256-GCM</td><td>Argon2id</td><td>{{ t('option.kdf_strength.normal') }}</td><td>16</td><td>12+</td></tr>
+        <tr><td>{{ icons.medium }} {{ t('level.medium') }}</td><td>RSA-2048</td><td>AES-128-GCM</td><td>PBKDF2</td><td>{{ t('option.kdf_strength.normal') }}</td><td>16</td><td>12+</td></tr>
+        <tr><td>{{ icons.weak }} {{ t('level.weak') }}</td><td>RSA-2048</td><td>AES-128-GCM</td><td>PBKDF2</td><td>{{ t('option.kdf_strength.normal') }}</td><td>{{ t('info.none') }}</td><td>12+</td></tr>
+        <tr><td>{{ icons.none }} {{ t('level.none') }}</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>{{ t('info.none') }}</td></tr>
       </tbody>
     </table>
   </div>
+  <ul class="info-list">
+    {% for lvl in levels %}<li><strong>{{ t('level.' ~ lvl) }}</strong> — {{ t('level.' ~ lvl ~ '.help') }}</li>{% endfor %}
+  </ul>
+  <p class="hint">{{ t('info.levels_note') }}</p>
 </section>
 
 <div class="info-grid">
   <section class="card">
-    <h2>Pourquoi le sel compte</h2>
-    <p>Sans sel, le même mot de passe donne toujours la même clé. Un attaquant peut alors <strong>précalculer</strong> ses essais une seule fois (« tables arc-en-ciel ») et les réutiliser contre tous les fichiers.</p>
-    <p>Avec un sel aléatoire, chaque essai ne vaut que pour <strong>un seul</strong> fichier : il faut tout recommencer pour le suivant. L'option « aucun sel » existe pour la démonstration, notée 🔴.</p>
+    <h2>{{ t('info.salt_title') }}</h2>
+    <p>{{ t('info.salt_text1') }}</p>
+    <p>{{ t('info.salt_text2') }}</p>
   </section>
-
   <section class="card">
-    <h2>Vérifier une empreinte</h2>
-    <p>L'<strong>empreinte</strong> est un résumé unique de la clé publique (SHA-256), identique sur toutes les machines. Quand vous ajoutez un contact, comparez-la avec lui <strong>de vive voix</strong>.</p>
-    <p>Si quelqu'un a remplacé la clé pendant son envoi (mail, messagerie…), les empreintes ne correspondront pas : c'est le seul moyen de détecter cette attaque « de l'homme du milieu ».</p>
+    <h2>{{ t('info.fingerprint_title') }}</h2>
+    <p>{{ t('info.fingerprint_text1') }}</p>
+    <p>{{ t('info.fingerprint_text2') }}</p>
   </section>
 </div>
 
 <section class="card">
-  <h2>Le paquet chiffré <code>.zip</code></h2>
-  <p class="hint">Format en cours de validation par l'équipe : les détails peuvent encore changer.</p>
+  <h2>{{ t('info.format_title') }}</h2>
+  <p>{{ t('info.format_intro') }}</p>
   <div class="table-wrap">
     <table class="format">
-      <thead><tr><th>Fichier</th><th>Contenu</th><th>Lisible sans la clé ?</th></tr></thead>
+      <thead><tr><th>{{ t('info.col_file') }}</th><th>{{ t('info.col_content') }}</th><th>{{ t('info.col_readable') }}</th></tr></thead>
       <tbody>
-        <tr><td><code>manifest.json</code></td><td>Version, algorithmes, paramètres, sel, empreinte du destinataire. Aucun secret.</td><td>Oui</td></tr>
-        <tr><td><code>key.enc</code></td><td>La clé du fichier, chiffrée pour le destinataire.</td><td>Non</td></tr>
-        <tr><td><code>file.enc</code></td><td>Le fichier chiffré par blocs, avec son nom d'origine à l'intérieur.</td><td>Non</td></tr>
+        <tr><td><code>key.enc</code></td><td>{{ t('info.format_key') }}</td><td>{{ t('common.no') }}</td></tr>
+        <tr><td><code>file.enc</code></td><td>{{ t('info.format_file') }}</td><td>{{ t('info.format_file_readable') }}</td></tr>
+        <tr><td><code>signature.sig</code></td><td>{{ t('info.format_sig') }}</td><td>{{ t('common.yes') }}</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="hint">Chaque bloc est authentifié avec le contenu exact de <code>manifest.json</code> : modifier un réglage ou un seul octet rend le paquet illisible, et rien n'est déchiffré.</p>
+  <p class="hint">{{ t('info.format_note') }}</p>
 </section>
 
 <div class="info-grid">
   <section class="card">
-    <h2>Conseils</h2>
+    <h2>{{ t('info.tips_title') }}</h2>
     <ul class="info-list">
-      <li><strong>Sauvegardez votre clé privée</strong> (Mes clés → Exporter la clé privée) sur un support à vous : si vous la perdez, ou oubliez son mot de passe, les fichiers chiffrés pour vous sont perdus. Personne ne peut les récupérer.</li>
-      <li>N'envoyez <strong>jamais</strong> votre clé privée à quelqu'un.</li>
-      <li>Un mot de passe long (une phrase) vaut mieux qu'un mot de passe compliqué.</li>
-      <li>Transmettez un mot de passe de fichier par un autre canal que le paquet.</li>
+      {% for n in range(1, 5) %}<li>{{ t('info.tip' ~ n) }}</li>{% endfor %}
     </ul>
   </section>
-
   <section class="card">
-    <h2>Ce que CryptEasy ne fait pas</h2>
+    <h2>{{ t('info.not_title') }}</h2>
     <ul class="info-list">
-      <li>envoyer les fichiers : c'est vous qui envoyez le paquet ;</li>
-      <li>protéger un ordinateur déjà infecté (un logiciel espion peut lire la clé pendant son utilisation) ;</li>
-      <li>cacher qu'un fichier a été échangé, ni sa taille approximative ;</li>
-      <li>ouvrir des fichiers chiffrés par d'autres outils (GPG, 7-Zip…).</li>
+      {% for n in range(1, 5) %}<li>{{ t('info.not' ~ n) }}</li>{% endfor %}
     </ul>
   </section>
 </div>

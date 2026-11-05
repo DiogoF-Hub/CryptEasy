@@ -1,9 +1,9 @@
-"""Fichiers temporaires de l'interface (§ 6 : « plaintext left on disk »).
+"""Fichiers et dossiers côté interface (SPEC § 5.5, § 8).
 
-Chaque opération travaille dans son propre dossier « job », supprimé :
-  - en cas d'erreur : tout de suite (bloc except/finally de la route) ;
-  - en cas de succès : après l'envoi complet du téléchargement (response.call_on_close).
-Au démarrage, les dossiers laissés par un lancement précédent (plantage) sont effacés.
+- Fichiers temporaires : un dossier par lancement (run-xxxx), un sous-dossier par
+  opération, supprimés après chaque action (y compris en cas d'erreur) et au démarrage.
+- Noms de fichiers assainis, jamais d'écrasement.
+- Taille d'un fichier ou d'un dossier, estimation du temps.
 """
 
 from __future__ import annotations
@@ -18,24 +18,38 @@ from pathlib import Path
 
 from flask import Flask, current_app
 
-from .errors import BadInput
+from .errors import BadInput, FileExists
 
-STALE_AFTER_S = 3600  # dossiers d'un autre lancement plus vieux qu'1 h : restes d'un plantage
+# Au démarrage, on supprime les dossiers temporaires dont aucun fichier n'a bougé depuis
+# ce délai : restes d'un lancement précédent (plantage). Les dossiers d'une autre
+# instance encore ouverte (double-clic sur l'exe) sont épargnés.
+STALE_AFTER_S = 3600
 _FORBIDDEN = re.compile(r'[<>:"|?*\x00-\x1f\x7f]')
 _WINDOWS_RESERVED = {
-    "CON",
-    "PRN",
-    "AUX",
-    "NUL",
+    "CON", "PRN", "AUX", "NUL",
     *(f"COM{i}" for i in range(1, 10)),
     *(f"LPT{i}" for i in range(1, 10)),
-}
+}  # fmt: skip
 MAX_NAME_BYTES = 255
+FALLBACK_NAME = "decrypted_file"
+BIG_FILE = 4 * 1000**3  # au-delà : « fichier volumineux, cela peut prendre quelques minutes »
+FOLDER_MARGIN = 1.3  # le zip d'un dossier prend aussi du temps (§ 5.5)
 
 
+# ----------------------------------------------------------------- temporaires
 def temp_root() -> Path:
     home = os.environ.get("CRYPTEASY_HOME")
     return Path(home) / "tmp" if home else Path(tempfile.gettempdir()) / "crypteasy-tmp"
+
+
+def _last_activity(folder: Path) -> float:
+    times = [folder.stat().st_mtime]
+    for path in folder.rglob("*"):
+        try:
+            times.append(path.stat().st_mtime)
+        except OSError:
+            pass
+    return max(times)
 
 
 def init_files(app: Flask, root: Path | None = None) -> None:
@@ -44,50 +58,104 @@ def init_files(app: Flask, root: Path | None = None) -> None:
     now = time.time()
     for old in root.glob("run-*"):
         try:
-            if now - old.stat().st_mtime > STALE_AFTER_S:
+            if now - _last_activity(old) > STALE_AFTER_S:
                 shutil.rmtree(old, ignore_errors=True)
         except OSError:
             pass
-    run_dir = root / f"run-{secrets.token_hex(4)}"
-    app.config["CRYPTEASY_RUN_DIR"] = run_dir
+    app.config["CRYPTEASY_RUN_DIR"] = root / f"run-{secrets.token_hex(4)}"
 
 
-def new_job() -> Path:
-    """Crée un dossier de travail privé pour une opération."""
+def new_job_dir() -> Path:
+    """Dossier de travail privé pour une opération."""
     job = Path(current_app.config["CRYPTEASY_RUN_DIR"]) / secrets.token_hex(8)
     job.mkdir(parents=True, mode=0o700)
     return job
 
 
-def remove_job(job: Path) -> None:
-    shutil.rmtree(job, ignore_errors=True)
+def remove_dir(path: Path | None) -> None:
+    if path is not None:
+        shutil.rmtree(path, ignore_errors=True)
 
 
 def remove_run_dir(app: Flask) -> None:
-    shutil.rmtree(app.config["CRYPTEASY_RUN_DIR"], ignore_errors=True)
+    remove_dir(Path(app.config["CRYPTEASY_RUN_DIR"]))
 
 
+# ----------------------------------------------------------------- noms
 def safe_filename(raw: str | None) -> str:
-    """Nom de fichier sans chemin ni caractère dangereux, utilisable sur tous les OS."""
+    """Nom de fichier sans chemin ni caractère dangereux, valable sur tous les OS (§ 8)."""
     name = (raw or "").replace("\\", "/").rsplit("/", 1)[-1]
     name = _FORBIDDEN.sub("_", name).strip().rstrip(".")
     if name in ("", ".", ".."):
-        raise BadInput("Nom de fichier invalide.")
+        raise BadInput("error.bad_filename")
     if len(name.encode("utf-8")) > MAX_NAME_BYTES:
-        raise BadInput("Nom de fichier trop long (255 octets maximum).")
+        raise BadInput("error.filename_too_long")
     if name.split(".")[0].upper() in _WINDOWS_RESERVED:
         name = "_" + name
     return name
 
 
-def save_upload(storage, dest_dir: Path) -> Path:
-    """Enregistre le fichier envoyé sous son nom assaini.
+def original_name(raw: str | None) -> str:
+    """Nom d'origine lu dans un paquet : nettoyé, ou « decrypted_file » (§ 8)."""
+    if raw is None or "\x00" in raw:
+        return FALLBACK_NAME
+    try:
+        return safe_filename(raw)
+    except BadInput:
+        return FALLBACK_NAME
 
-    Écriture par blocs : le fichier n'est jamais chargé entier en mémoire.
-    """
-    if storage is None or not storage.filename:
-        raise BadInput("Choisissez un fichier.")
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    path = dest_dir / safe_filename(storage.filename)
-    storage.save(path)
-    return path
+
+def unique_child(parent: Path, name: str) -> Path:
+    """parent/name, ou « name (2) », « name (3) »… si le nom est pris (§ 5.4)."""
+    candidate = parent / name
+    stem, suffix = Path(name).stem, Path(name).suffix
+    n = 2
+    while candidate.exists():
+        candidate = parent / f"{stem} ({n}){suffix}"
+        n += 1
+    return candidate
+
+
+def move_no_overwrite(src: Path, dst: Path) -> None:
+    """Déplace src vers dst, jamais par-dessus un fichier existant (§ 8)."""
+    if dst.exists():
+        raise FileExists(name=dst.name)
+    try:
+        os.link(src, dst)  # échoue si dst existe : pas de fenêtre de course
+        src.unlink()
+    except FileExistsError as exc:
+        raise FileExists(name=dst.name) from exc
+    except OSError:
+        # autre disque ou système sans liens durs : copie puis suppression
+        with open(src, "rb") as fin, open(dst, "xb") as fout:
+            shutil.copyfileobj(fin, fout, 1024 * 1024)
+        src.unlink()
+
+
+# ----------------------------------------------------------------- tailles
+def describe(path: Path) -> tuple[int, int]:
+    """(taille totale en octets, nombre de fichiers). Les liens symboliques sont ignorés,
+    comme au moment de zipper le dossier (§ 5.4)."""
+    if path.is_symlink():
+        return 0, 0
+    if path.is_file():
+        return path.stat().st_size, 1
+    size = count = 0
+    for root, dirs, files in os.walk(path):
+        dirs[:] = [d for d in dirs if not (Path(root) / d).is_symlink()]
+        for name in files:
+            f = Path(root) / name
+            if not f.is_symlink():
+                try:
+                    size += f.stat().st_size
+                    count += 1
+                except OSError:
+                    pass
+    return size, count
+
+
+def estimate_seconds(size: int, speed: float | None, is_folder: bool = False) -> float | None:
+    """Temps estimé (§ 5.5) ; None tant que la vitesse du PC n'est pas mesurée."""
+    if not speed:
+        return None
+    return size / speed * (FOLDER_MARGIN if is_folder else 1.0)

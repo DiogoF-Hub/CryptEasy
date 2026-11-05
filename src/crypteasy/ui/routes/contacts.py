@@ -1,10 +1,11 @@
-"""Écran « Contacts » (F3) : ajouter (fichier .pem ou clé collée), voir l'empreinte,
-renommer, supprimer. Un contact est identifié par l'empreinte de sa clé."""
+"""Écran « Contacts » (F3) : ajouter (fichier .pem choisi dans la boîte native, ou clé
+collée), voir l'empreinte, renommer, supprimer. Un contact = l'empreinte de sa clé."""
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..errors import BadInput, user_message
-from . import backend, clean_label
+from ..errors import BadInput, InvalidPublicKey, user_message
+from ..i18n import t
+from . import backend, clean_label, selections
 
 bp = Blueprint("contacts", __name__, url_prefix="/contacts")
 MAX_KEY_BYTES = 64 * 1024
@@ -29,24 +30,20 @@ def index():
 def add():
     form = request.form
     try:
-        name = clean_label(form.get("name"), "Le nom du contact")
-        upload = request.files.get("keyfile")
-        if upload and upload.filename:
-            pem = upload.stream.read(MAX_KEY_BYTES + 1)
-            if len(pem) > MAX_KEY_BYTES:
-                raise BadInput("Ce fichier est trop gros pour être une clé publique.")
+        name = clean_label(form.get("name"))
+        if form.get("key_selection"):
+            path = selections().get(form.get("key_selection"), "public-key").path
+            if path.stat().st_size > MAX_KEY_BYTES:
+                raise InvalidPublicKey()
+            pem = path.read_bytes()
         else:
             pem = form.get("keytext", "").strip().encode("utf-8")
         if not pem:
-            raise BadInput("Importez le fichier .pem de sa clé publique, ou collez-la.")
+            raise BadInput("error.contact_key_required")
         view = backend().add_contact(name, pem)
     except Exception as exc:  # traduit en message par user_message
-        return _page(user_message(exc), form, 400)
-    flash(
-        f"Contact « {view.name} » ajouté. Empreinte : {view.fingerprint}. "
-        "Vérifiez-la avec cette personne, par téléphone ou en face à face.",
-        "success",
-    )
+        return _page(user_message(exc), {k: form.get(k, "") for k in ("name", "keytext")}, 400)
+    flash(t("contacts.added", name=view.name, fingerprint=view.fingerprint), "success")
     return redirect(url_for("contacts.index"))
 
 
@@ -54,11 +51,11 @@ def add():
 def rename():
     fingerprint = request.form.get("fingerprint", "")
     try:
-        name = clean_label(request.form.get("name"), "Le nom du contact")
+        name = clean_label(request.form.get("name"))
         backend().rename_contact(fingerprint, name)
     except Exception as exc:  # traduit en message par user_message
         return _page(user_message(exc), status=400, editing=fingerprint)
-    flash(f"Contact renommé en « {name} ».", "success")
+    flash(t("contacts.renamed", name=name), "success")
     return redirect(url_for("contacts.index"))
 
 
@@ -68,5 +65,5 @@ def remove():
     names = [c.name for c in backend().list_contacts() if c.fingerprint == fingerprint]
     backend().remove_contact(fingerprint)
     if names:
-        flash(f"Contact « {names[0]} » supprimé.", "success")
+        flash(t("contacts.deleted", name=names[0]), "success")
     return redirect(url_for("contacts.index"))

@@ -1,4 +1,8 @@
-"""Protections du serveur local (IMPLEMENTATION.md § 6).
+"""Protections du serveur local (SPEC_TECHNIQUE § 8).
+
+pywebview affiche nos pages via un petit serveur sur 127.0.0.1. Tant que l'appli est
+ouverte, d'autres programmes du PC, ou un site ouvert dans le navigateur habituel,
+pourraient essayer de l'appeler : d'où les contrôles ci-dessous.
 
 Ordre des contrôles à chaque requête :
   1. en-tête Host  → 400 si ce n'est pas 127.0.0.1:<port> ou localhost:<port> (DNS rebinding)
@@ -39,7 +43,7 @@ def init_security(app: Flask, *, port: int | None, launch_token: str) -> None:
     @app.before_request
     def check_host():
         if request.host not in allowed_hosts:
-            abort(400, "Adresse non autorisée.")
+            abort(400, "bad-host")
 
     @app.before_request
     def check_launch_token():

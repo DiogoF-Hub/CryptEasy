@@ -1,49 +1,62 @@
 {% extends "base.html" %}
-{% from "_macros.html" import csrf %}
-{% block title %}Déchiffrer{% endblock %}
+{% block title %}{{ t('decrypt.title') }}{% endblock %}
 {% block content %}
-<h1>Déchiffrer un fichier</h1>
+<h1>{{ t('decrypt.title') }}</h1>
 
-<section class="card narrow">
-  <form method="post" action="{{ url_for('decrypt.run') }}" enctype="multipart/form-data"
-        class="form" data-download autocomplete="off">
-    {{ csrf() }}
+<section class="card narrow" data-decrypt-page>
+  <div class="form">
+    <div class="step"><span class="step-num">1</span> {{ t('decrypt.step_package') }}</div>
+    <div class="source-buttons">
+      <button type="button" class="btn" data-pick="package">{{ t('decrypt.pick_package') }}</button>
+    </div>
+    <div class="selection" data-selection hidden>
+      <div class="selection-name" data-sel-name></div>
+      <div class="selection-meta" data-sel-meta></div>
+      <div class="selection-warn" data-sel-big hidden>{{ t('encrypt.big_file') }}</div>
+    </div>
 
-    <div class="step"><span class="step-num">1</span> Le paquet reçu</div>
-    <label class="dropzone">
-      <input type="file" name="file" required accept=".zip">
-      <span class="dropzone-text">Glissez le fichier <code>.zip</code> ici ou <u>parcourez</u></span>
-      <span class="dropzone-name"></span>
-    </label>
+    <div data-key-step hidden>
+      <div class="step"><span class="step-num">2</span> {{ t('decrypt.step_key') }}</div>
+      <div class="key-found" data-key-found hidden></div>
+      <div class="alert alert-error" data-key-missing hidden></div>
+      <div class="key-file-choice" data-key-file-block hidden>
+        <p class="hint">{{ t('decrypt.key_file_help') }}</p>
+        <div class="chooser" data-choose="key-file" data-field="key_selection">
+          <input type="hidden" name="key_selection" value="">
+          <button type="button" class="btn">{{ t('decrypt.use_key_file') }}</button>
+          <span class="chooser-name" aria-live="polite"></span>
+        </div>
+      </div>
+      <button type="button" class="btn-link" data-show-key-file hidden>{{ t('decrypt.use_other_key') }}</button>
 
-    <div class="step"><span class="step-num">2</span> Votre clé privée</div>
-    {% if identities %}
-    <label>Clé
-      <select name="identity">
-        {% for k in identities %}
-          <option value="{{ k.fingerprint }}" {% if k.fingerprint == selected %}selected{% endif %}>{{ k.name }} ({{ k.kind }})</option>
-        {% endfor %}
-      </select>
-    </label>
-    {% endif %}
-    <details class="advanced" {% if not identities %}open{% endif %}>
-      <summary>{% if identities %}Ou utiliser{% else %}Utiliser{% endif %} un fichier de clé privée (.pem)</summary>
-      <label>Clé privée
-        <input type="file" name="privkey" accept=".pem,.key">
-        <small>Elle n'est utilisée que pour ce déchiffrement, pas enregistrée.</small>
+      <label data-passphrase-field hidden>{{ t('decrypt.passphrase') }}
+        <input type="password" name="passphrase" autocomplete="current-password">
       </label>
-    </details>
-    <label>Mot de passe de la clé privée
-      <input type="password" name="password" required autocomplete="current-password">
-    </label>
+      <p class="hint" data-no-passphrase-note hidden>{{ t('decrypt.no_passphrase_note') }}</p>
 
-    <label>Mot de passe du fichier <span class="optional">(seulement si l'expéditeur en a mis un)</span>
-      <input type="password" name="file_password" autocomplete="off">
-    </label>
+      <button class="btn btn-primary btn-wide" type="button" data-run disabled>{{ t('decrypt.button') }}</button>
+    </div>
 
-    <button class="btn btn-primary btn-wide" type="submit" data-busy="Déchiffrement…">Déchiffrer et télécharger</button>
-    <p class="status" aria-live="polite"></p>
-  </form>
-  <p class="hint">Le fichier retrouve son nom d'origine. Si le paquet a été modifié, rien n'est déchiffré.</p>
+    <div class="progress-block" data-progress hidden>
+      <div class="progress"><span data-progress-bar></span></div>
+      <div class="progress-text" data-progress-text aria-live="polite"></div>
+    </div>
+
+    <div class="save-choice" data-save-choice hidden>
+      <p data-save-text></p>
+      <div class="source-buttons" data-save-file hidden>
+        <button type="button" class="btn btn-primary" data-save="file">{{ t('decrypt.save_file') }}</button>
+      </div>
+      <div class="source-buttons" data-save-folder hidden>
+        <button type="button" class="btn" data-save="zip">{{ t('decrypt.keep_zip') }}</button>
+        <button type="button" class="btn btn-primary" data-save="extract">{{ t('decrypt.extract') }}</button>
+      </div>
+    </div>
+    <div class="result" data-result hidden>
+      <div class="alert alert-success" data-result-text role="status"></div>
+      <button type="button" class="btn" data-reveal>{{ t('common.open_folder') }}</button>
+    </div>
+    <div class="alert alert-error" data-error role="alert" hidden></div>
+  </div>
 </section>
 {% endblock %}

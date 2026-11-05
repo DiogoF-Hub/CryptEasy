@@ -1,17 +1,18 @@
-"""Middleware § 6 : Host, jeton de lancement, CSRF, cookies, en-têtes (porte MS1)."""
+"""Serveur local (SPEC § 8) : Host, jeton de lancement, CSRF (formulaires et API),
+cookies, en-têtes, et aucune route qui accepte un chemin venant de la page."""
 
 import pytest
 
 from crypteasy.ui import create_app
 from crypteasy.ui.fake_backend import FakeBackend
 
-from .conftest import TOKEN, csrf_of, html
+from .conftest import TOKEN, api, csrf_of, html
 
 
 # ---------------------------------------------------------------- Host (DNS rebinding)
 def test_mauvais_host_rejete(client):
     r = client.get("/", base_url="http://attaquant.example/")
-    assert r.status_code == 400
+    assert r.status_code == 400 and "Adresse non autorisée" in html(r)
 
 
 def test_host_avec_port_reel(tmp_path):
@@ -29,10 +30,16 @@ def test_cookie_nomme_par_port(tmp_path):
 
 
 # ---------------------------------------------------------------- jeton de lancement
-@pytest.mark.parametrize("path", ["/", "/cles", "/contacts", "/chiffrer", "/dechiffrer"])
+@pytest.mark.parametrize(
+    "path", ["/", "/cles", "/contacts", "/chiffrer", "/dechiffrer", "/info", "/api/taches/x"]
+)
 def test_sans_jeton_403(anon, path):
-    r = anon.get(path)
-    assert r.status_code == 403 and "Accès refusé" in html(r)
+    assert anon.get(path).status_code == 403
+
+
+def test_page_403_sans_navigation(anon):
+    page = html(anon.get("/"))
+    assert "Accès refusé" in page and "nav" not in page.split("<main")[0].split("<body>")[1]
 
 
 def test_mauvais_jeton_403(anon):
@@ -51,22 +58,51 @@ def test_fichiers_statiques_publics(anon):
 
 # ---------------------------------------------------------------- CSRF
 @pytest.mark.parametrize(
-    "path", ["/cles", "/contacts", "/contacts/supprimer", "/chiffrer", "/dechiffrer"]
-)
-def test_post_sans_csrf_400(client, path):
+    "path",
+    ["/cles", "/cles/importer", "/cles/proteger", "/cles/exporter-publique",
+     "/cles/exporter-privee", "/cles/supprimer", "/contacts", "/contacts/renommer",
+     "/contacts/supprimer", "/langue"],
+)  # fmt: skip
+def test_formulaire_sans_csrf_400(client, path):
     r = client.post(path, data={"name": "x"})
     assert r.status_code == 400 and "Jeton de sécurité" in html(r)
 
 
-def test_post_avec_mauvais_csrf_400(client):
-    csrf_of(client)  # la session a un jeton…
-    assert client.post("/contacts", data={"csrf_token": "faux"}).status_code == 400
+@pytest.mark.parametrize(
+    "path", ["/api/choisir", "/api/chiffrer", "/api/dechiffrer", "/api/taches/x/enregistrer",
+             "/api/taches/x/ouvrir-dossier", "/api/taches/x/abandonner"]
+)  # fmt: skip
+def test_api_sans_csrf_400_en_json(client, dialogs, path):
+    r = client.post(path, json={"what": "file"})
+    assert r.status_code == 400 and "Jeton de sécurité" in r.get_json()["error"]
+    assert dialogs.calls == []  # aucune boîte de dialogue ne s'est ouverte
+
+
+def test_api_avec_mauvais_csrf(client):
+    csrf_of(client)
+    r = client.post("/api/choisir", json={"what": "file"}, headers={"X-CSRFToken": "faux"})
+    assert r.status_code == 400
+
+
+def test_get_ne_modifie_rien(client):
+    assert client.get("/cles/supprimer").status_code == 405
+    assert client.get("/api/chiffrer").status_code == 405
+
+
+# ---------------------------------------------------------------- chemins
+@pytest.mark.parametrize("field", ["selection", "recipient"])
+def test_api_n_accepte_jamais_un_chemin(client, dialogs, field):
+    """Un site malveillant ne peut pas désigner un fichier du disque : seuls les
+    identifiants créés par une boîte de dialogue native sont acceptés."""
+    r = api(client, "/api/chiffrer", {"selection": "/etc/passwd", field: "/etc/passwd"})
+    assert r.status_code == 400 and dialogs.calls == []
+    r = api(client, "/api/dechiffrer", {"selection": "C:\\Windows\\win.ini"})
+    assert r.status_code == 400
 
 
 # ---------------------------------------------------------------- cookies et en-têtes
 def test_cookie_de_session(anon):
-    r = anon.get(f"/?token={TOKEN}")
-    cookie = r.headers["Set-Cookie"]
+    cookie = anon.get(f"/?token={TOKEN}").headers["Set-Cookie"]
     assert "HttpOnly" in cookie and "SameSite=Strict" in cookie
 
 
@@ -79,8 +115,22 @@ def test_entetes_securite(client):
     assert h["Referrer-Policy"] == "no-referrer"
 
 
-def test_secret_different_a_chaque_lancement(tmp_path):
+def test_pas_de_script_en_ligne(client):
+    """CSP : seuls app.js (fichier) et le bloc de données JSON des traductions."""
+    import re
+
+    page = html(client.get("/chiffrer"))
+    scripts = re.findall(r"<script([^>]*)>", page)
+    assert all("src=" in s or 'type="application/json"' in s for s in scripts)
+
+
+def test_secret_et_jeton_differents_a_chaque_lancement(tmp_path):
     a = create_app(FakeBackend(), temp_root=tmp_path)
     b = create_app(FakeBackend(), temp_root=tmp_path)
     assert a.config["SECRET_KEY"] != b.config["SECRET_KEY"]
     assert a.config["LAUNCH_TOKEN"] != b.config["LAUNCH_TOKEN"]
+
+
+def test_requete_trop_grosse(client):
+    r = client.post("/contacts", data={"keytext": "x" * (2 * 1024 * 1024)})
+    assert r.status_code == 413

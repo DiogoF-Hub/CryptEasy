@@ -1,106 +1,91 @@
 {% extends "base.html" %}
-{% from "_macros.html" import csrf, key_head, rating_box, pw_meter %}
-{% block title %}Mes clés{% endblock %}
+{% from "_macros.html" import csrf, key_head, rating_box, protection_fields, choose_button with context %}
+{% block title %}{{ t('keys.title') }}{% endblock %}
 {% block content %}
-<h1>Mes clés</h1>
+<h1>{{ t('keys.title') }}</h1>
 
 <div class="two-col">
   <div class="stack">
     <section class="card">
-      <h2>Créer une paire de clés</h2>
-      <form method="post" action="{{ url_for('keys.create') }}" class="form" autocomplete="off">
+      <h2>{{ t('keys.create_title') }}</h2>
+      <form method="post" action="{{ url_for('keys.create') }}" class="form" autocomplete="off" data-protection>
         {{ csrf() }}
-        <label>Nom de la clé
-          <input type="text" name="name" required maxlength="64" placeholder="ex. PC de Diogo"
+        <label>{{ t('keys.name') }}
+          <input type="text" name="name" required maxlength="64" placeholder="{{ t('keys.name_placeholder') }}"
                  value="{{ form.get('name', '') }}">
         </label>
-        <label>Mot de passe de protection
-          <input type="password" name="password" required minlength="{{ min_pw }}"
-                 autocomplete="new-password" data-rate-password>
-          {{ pw_meter('password') }}
-          <small>Au moins {{ min_pw }} caractères, pas de symbole imposé : une phrase facile à retenir fonctionne très bien. Sans lui, impossible de déchiffrer.</small>
-        </label>
-        <label>Confirmer le mot de passe
-          <input type="password" name="password2" required minlength="{{ min_pw }}" autocomplete="new-password">
-        </label>
-
-        {% set chosen = form.get('key_type') or default_type %}
-        {% set chosen_kdf = form.get('kdf') or default_kdf %}
-        <details class="advanced" {% if chosen != default_type or chosen_kdf != default_kdf %}open{% endif %}>
-          <summary>Options avancées</summary>
-          <label>Type de clé
-            <select name="key_type" data-rate="key_type">
-              {% for value, label in key_types.items() %}
-                <option value="{{ value }}" {% if value == chosen %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          {% if kdfs %}
-          <label>Protection de la clé privée (KDF)
-            <select name="kdf" data-rate="kdf">
-              {% for value, label in kdfs.items() %}
-                <option value="{{ value }}" {% if value == chosen_kdf %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-            <small>Transforme votre mot de passe en clé de chiffrement, avec un sel aléatoire de 16 octets.</small>
-          </label>
-          {% endif %}
-        </details>
-
+        {{ protection_fields(levels, level, choices, options, form, icons) }}
         {{ rating_box(rating, rules) }}
-        <button class="btn btn-primary" type="submit" data-busy="Génération…">Générer</button>
+        <button class="btn btn-primary" type="submit" data-busy="{{ t('keys.generating') }}">{{ t('keys.generate') }}</button>
       </form>
     </section>
 
-    <details class="card card-details" {% if open_import %}open{% endif %}>
-      <summary><h2>Importer une clé privée existante</h2></summary>
-      <form method="post" action="{{ url_for('keys.import_private') }}" enctype="multipart/form-data"
-            class="form" autocomplete="off">
+    <details class="card card-details" {% if panel == 'import' %}open{% endif %}>
+      <summary><h2>{{ t('keys.import_title') }}</h2></summary>
+      <form method="post" action="{{ url_for('keys.import_private') }}" class="form" autocomplete="off" data-protection>
         {{ csrf() }}
-        <p class="hint">Une clé exportée depuis CryptEasy sur un autre PC, ou créée avec OpenSSL (RSA ou X25519, format .pem).</p>
-        <label>Nom de la clé
+        <p class="hint">{{ t('keys.import_help') }}</p>
+        <label>{{ t('keys.name') }}
           <input type="text" name="name" required maxlength="64" value="{{ form.get('import_name', '') }}">
         </label>
-        <label>Fichier .pem de la clé privée
-          <input type="file" name="keyfile" required accept=".pem,.key">
+        <div class="field">
+          <span class="field-label">{{ t('keys.import_file') }}</span>
+          {{ choose_button('key-file', 'key_selection', t('common.choose_file')) }}
+        </div>
+        <label>{{ t('keys.current_passphrase') }} <span class="optional">{{ t('keys.current_passphrase_optional') }}</span>
+          <input type="password" name="current_passphrase" autocomplete="off">
         </label>
-        <label>Mot de passe de la clé
-          <input type="password" name="password" required autocomplete="off">
-          <small>Si la clé n'est pas protégée, ce mot de passe servira à la protéger (au moins {{ min_pw }} caractères).</small>
-        </label>
-        <button class="btn" type="submit">Importer</button>
+        <p class="hint">{{ t('keys.import_relock') }}</p>
+        {{ protection_fields(levels, 'strong', {'kdf': 'argon2id', 'kdf_strength': 'normal', 'salt': '16'}, options, {}, icons, with_key_type=false) }}
+        {{ rating_box(rating, rules) }}
+        <button class="btn" type="submit">{{ t('keys.import_button') }}</button>
       </form>
     </details>
   </div>
 
   <section class="card">
-    <h2>Mes paires de clés</h2>
+    <h2>{{ t('keys.list_title') }}</h2>
     {% if identities %}
     <ul class="key-list">
       {% for k in identities %}
       <li class="key-item">
         {{ key_head(k) }}
+        {% if not k.protected %}<p class="warn-line">{{ t('keys.unprotected_warning') }}</p>{% endif %}
         <div class="key-actions">
-          <a class="btn btn-small" href="{{ url_for('keys.export_public', fpr=k.fingerprint) }}">Exporter la clé publique</a>
-          <form method="post" action="{{ url_for('keys.export_private') }}"
-                data-confirm="Votre clé privée ne doit JAMAIS être envoyée à quelqu'un. L'exporter pour la sauvegarder ou la copier sur un autre de vos PC ?">
-            {{ csrf() }}
-            <input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
-            <button class="btn btn-small btn-warn" type="submit">Exporter la clé privée</button>
+          <form method="post" action="{{ url_for('keys.export_public') }}">
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
+            <button class="btn btn-small" type="submit">{{ t('keys.export_public') }}</button>
           </form>
-          <form method="post" action="{{ url_for('keys.delete') }}"
-                data-confirm="Supprimer « {{ k.name }} » ? Les fichiers chiffrés pour cette clé ne pourront plus jamais être ouverts, sauf si vous en avez une sauvegarde.">
-            {{ csrf() }}
-            <input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
-            <button class="btn btn-small btn-ghost-danger" type="submit">Supprimer</button>
+          <form method="post" action="{{ url_for('keys.export_private') }}" data-confirm="{{ t('keys.export_private_confirm') }}">
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
+            <button class="btn btn-small btn-warn" type="submit">{{ t('keys.export_private') }}</button>
+          </form>
+          <form method="post" action="{{ url_for('keys.delete') }}" data-confirm="{{ t('keys.delete_confirm', name=k.name) }}">
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
+            <button class="btn btn-small btn-ghost-danger" type="submit">{{ t('common.delete') }}</button>
           </form>
         </div>
+        <details class="subpanel" {% if panel == k.fingerprint %}open{% endif %}>
+          <summary>{{ t('keys.change_protection') }}</summary>
+          <form method="post" action="{{ url_for('keys.change_protection') }}" class="form" autocomplete="off" data-protection>
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
+            {% if k.protected %}
+            <label>{{ t('keys.current_passphrase') }}
+              <input type="password" name="current_passphrase" required autocomplete="current-password">
+            </label>
+            {% endif %}
+            {{ protection_fields(levels, 'strong', {'kdf': 'argon2id', 'kdf_strength': 'normal', 'salt': '16', 'key_type': k.key_type}, options, {}, icons, with_key_type=false) }}
+            <input type="hidden" name="key_type" value="{{ k.key_type }}" data-rate="key_type">
+            {{ rating_box(rating, rules) }}
+            <button class="btn btn-small btn-primary" type="submit">{{ t('keys.change_protection_button') }}</button>
+          </form>
+        </details>
       </li>
       {% endfor %}
     </ul>
-    <p class="hint">Envoyez votre <strong>clé publique</strong> à vos correspondants, puis lisez-leur l'<strong>empreinte</strong> par téléphone ou en personne : ils pourront vérifier qu'ils ont bien la vôtre.</p>
+    <p class="hint">{{ t('keys.share_hint') }}</p>
     {% else %}
-    <p class="empty">Aucune clé pour l'instant. Créez-en une pour pouvoir recevoir des fichiers.</p>
+    <p class="empty">{{ t('keys.empty') }}</p>
     {% endif %}
   </section>
 </div>

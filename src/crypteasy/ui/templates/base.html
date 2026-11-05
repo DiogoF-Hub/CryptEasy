@@ -1,17 +1,20 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_value() }}">
   <title>{% block title %}CryptEasy{% endblock %} · CryptEasy</title>
   <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  {# Textes pour le JavaScript : bloc de données (non exécuté), compatible avec la CSP #}
+  <script type="application/json" id="i18n">{{ js_strings()|tojson }}</script>
 </head>
 <body>
   {% if demo_mode %}
   <div class="demo-banner" role="alert">
-    <strong>Mode démo</strong> : moteur factice, les fichiers ne sont PAS chiffrés.
+    <strong>{{ t('demo.title') }}</strong> {{ t('demo.text') }}
   </div>
   {% endif %}
 
@@ -22,16 +25,22 @@
       CryptEasy
     </a>
     {% set bp = request.blueprint %}
-    <nav aria-label="Navigation principale">
-      <a href="{{ url_for('encrypt.index') }}" {% if bp == 'encrypt' %}aria-current="page"{% endif %}>Chiffrer</a>
-      <a href="{{ url_for('decrypt.index') }}" {% if bp == 'decrypt' %}aria-current="page"{% endif %}>Déchiffrer</a>
-      <a href="{{ url_for('keys.index') }}" {% if bp == 'keys' %}aria-current="page"{% endif %}>Mes clés</a>
-      <a href="{{ url_for('contacts.index') }}" {% if bp == 'contacts' %}aria-current="page"{% endif %}>Contacts</a>
-      <a href="{{ url_for('home.info') }}" {% if request.endpoint == 'home.info' %}aria-current="page"{% endif %}>Info</a>
-      <form method="post" action="{{ url_for('app_control.quit_app') }}" class="quit-form"
-            data-confirm="Quitter CryptEasy ?">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="quit-btn" title="Fermer l'application">Quitter</button>
+    <nav aria-label="{{ t('nav.label') }}">
+      <a href="{{ url_for('encrypt.index') }}" {% if bp == 'encrypt' %}aria-current="page"{% endif %}>{{ t('nav.encrypt') }}</a>
+      <a href="{{ url_for('decrypt.index') }}" {% if bp == 'decrypt' %}aria-current="page"{% endif %}>{{ t('nav.decrypt') }}</a>
+      <a href="{{ url_for('keys.index') }}" {% if bp == 'keys' %}aria-current="page"{% endif %}>{{ t('nav.keys') }}</a>
+      <a href="{{ url_for('contacts.index') }}" {% if bp == 'contacts' %}aria-current="page"{% endif %}>{{ t('nav.contacts') }}</a>
+      <a href="{{ url_for('home.info') }}" {% if request.endpoint == 'home.info' %}aria-current="page"{% endif %}>{{ t('nav.info') }}</a>
+      <form method="post" action="{{ url_for('home.language') }}" class="lang-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_value() }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <label class="sr-only" for="lang-select">{{ t('nav.language') }}</label>
+        <select id="lang-select" name="lang" data-autosubmit>
+          {% for code, label in languages() %}
+          <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button type="submit">OK</button></noscript>
       </form>
     </nav>
   </header>

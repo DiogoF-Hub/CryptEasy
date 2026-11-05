@@ -1,11 +1,12 @@
-"""Réglages de sécurité réglables (SPEC_TECHNIQUE § 4) et indicateur de niveau (F6).
+"""Niveaux de sécurité (SPEC § 4.2) et indicateur (F6), côté interface.
 
-Source UNIQUE des notes 🟢 / 🟡 / 🔴 : le serveur s'en sert pour l'affichage
-initial et les tests, la page la reçoit en JSON (attribut data-) pour la mise à
-jour en direct. Le mot de passe n'est jamais envoyé au serveur pour être noté :
-seule sa longueur est évaluée, dans le navigateur.
+- PRESETS : ce que chaque niveau remplit sur l'écran de génération de clés.
+- RATINGS : la note de chaque valeur de chaque réglage. Le niveau affiché est celui
+  du réglage le plus faible (« personnalisé » compris).
+- Même source pour le serveur (affichage initial, tests) et pour la page (rules_json,
+  recalcul en direct dans app.js). Les textes sont des clés de traduction.
 
-À faire relire par Member 1 (crypto) : ce sont des jugements de sécurité.
+Si core/levels.py (Track A) fournit ces règles, ce module devra simplement les relire.
 """
 
 from __future__ import annotations
@@ -13,130 +14,116 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-# ------------------------------------------------------------------ choix proposés
-KEY_TYPES = {
-    "x25519": "X25519 (recommandé)",
-    "rsa-3072": "RSA 3072 bits",
-    "rsa-4096": "RSA 4096 bits",
-    "rsa-2048": "RSA 2048 bits",
-}
-DEFAULT_KEY_TYPE = "x25519"
+from .i18n import t
 
-CIPHERS = {"aes-256-gcm": "AES-256-GCM (recommandé)", "aes-128-gcm": "AES-128-GCM"}
+# Du plus fort au plus faible
+VERY_STRONG, STRONG, MEDIUM, WEAK, NONE = "very_strong", "strong", "medium", "weak", "none"
+ORDER = [VERY_STRONG, STRONG, MEDIUM, WEAK, NONE]
+ICONS = {VERY_STRONG: "🟢🟢", STRONG: "🟢", MEDIUM: "🟡", WEAK: "🔴", NONE: "⛔"}
+CUSTOM = "custom"
+DEFAULT_LEVEL = STRONG
+
+# ------------------------------------------------------------------ choix proposés
+KEY_TYPES = ["x25519", "rsa-4096", "rsa-3072", "rsa-2048"]
+CIPHERS = ["aes-256-gcm", "aes-128-gcm"]
+KDFS = ["argon2id", "pbkdf2-sha256"]
+KDF_STRENGTHS = ["normal", "fort", "max"]
+SALTS = ["32", "16", "0"]  # octets ; "0" = aucun sel (PBKDF2 uniquement)
 DEFAULT_CIPHER = "aes-256-gcm"
 
-KDFS = {"argon2id": "Argon2id (recommandé)", "pbkdf2-sha256": "PBKDF2-SHA256"}
-DEFAULT_KDF = "argon2id"
+MIN_PASSPHRASE = 12
+VERY_STRONG_PASSPHRASE = 16
 
-# Préréglages : valeurs exactes à mesurer (D11), cible ~0,5 s / 1 s / 3 s
-KDF_STRENGTHS = {"normal": "Normal (~0,5 s)", "fort": "Fort (~1 s)", "max": "Maximum (~3 s)"}
-DEFAULT_KDF_STRENGTH = "normal"
-
-SALT_LENGTHS = {
-    "16": "16 octets (recommandé)",
-    "32": "32 octets",
-    "0": "Aucun sel (déconseillé, PBKDF2 uniquement)",
+# Ce que chaque niveau remplit (§ 4.2). « none » = case « sans phrase secrète ».
+PRESETS: dict[str, dict[str, str]] = {
+    VERY_STRONG: {"key_type": "x25519", "kdf": "argon2id", "kdf_strength": "max", "salt": "32"},
+    STRONG: {"key_type": "x25519", "kdf": "argon2id", "kdf_strength": "normal", "salt": "16"},
+    MEDIUM: {
+        "key_type": "rsa-2048",
+        "kdf": "pbkdf2-sha256",
+        "kdf_strength": "normal",
+        "salt": "16",
+    },
+    WEAK: {"key_type": "rsa-2048", "kdf": "pbkdf2-sha256", "kdf_strength": "normal", "salt": "0"},
 }
-DEFAULT_SALT = "16"
 
-MIN_PASSWORD_LENGTH = 12  # D5
-
-
-@dataclass(frozen=True)
-class EncryptOptions:
-    cipher: str = DEFAULT_CIPHER
-    password: bytes | None = None  # mot de passe supplémentaire ; None = désactivé
-    kdf: str = DEFAULT_KDF
-    kdf_strength: str = DEFAULT_KDF_STRENGTH
-    salt_len: int = 16  # 0 = sans sel (PBKDF2 uniquement, D3)
+# réglage → valeur → niveau (l'explication est la clé "rating.<réglage>.<valeur>")
+RATINGS: dict[str, dict[str, str]] = {
+    "key_type": {"x25519": VERY_STRONG, "rsa-4096": VERY_STRONG, "rsa-3072": STRONG,
+                 "rsa-2048": MEDIUM},
+    "cipher": {"aes-256-gcm": VERY_STRONG, "aes-128-gcm": MEDIUM},
+    "kdf": {"argon2id": VERY_STRONG, "pbkdf2-sha256": MEDIUM},
+    "kdf_strength": {"max": VERY_STRONG, "fort": STRONG, "normal": STRONG},
+    "salt": {"32": VERY_STRONG, "16": STRONG, "0": WEAK},
+}  # fmt: skip
 
 
-# ------------------------------------------------------------------ niveaux
-GOOD, OK, WEAK = "good", "ok", "weak"
-LEVELS = {
-    GOOD: {"icon": "🟢", "label": "Recommandé"},
-    OK: {"icon": "🟡", "label": "Correct"},
-    WEAK: {"icon": "🔴", "label": "Faible"},
-}
-_ORDER = [GOOD, OK, WEAK]
-
-# réglage → valeur → (niveau, explication d'une ligne)
-RULES: dict[str, dict[str, tuple[str, str]]] = {
-    "key_type": {
-        "x25519": (GOOD, "X25519 : courbe elliptique moderne, rapide et sûre."),
-        "rsa-4096": (GOOD, "RSA 4096 bits : très solide, mais lent à générer."),
-        "rsa-3072": (GOOD, "RSA 3072 bits : niveau recommandé pour RSA (128 bits de sécurité)."),
-        "rsa-2048": (
-            OK,
-            "RSA 2048 bits : encore acceptable, mais en fin de vie (112 bits de sécurité).",
-        ),
-    },
-    "cipher": {
-        "aes-256-gcm": (GOOD, "AES-256-GCM : chiffre le fichier et détecte toute modification."),
-        "aes-128-gcm": (
-            OK,
-            "AES-128-GCM : sûr aussi, avec une marge de sécurité plus faible qu'AES-256.",
-        ),
-    },
-    "kdf": {
-        "argon2id": (
-            GOOD,
-            "Argon2id : coûteux en mémoire, résiste aux attaques par carte graphique.",
-        ),
-        "pbkdf2-sha256": (
-            OK,
-            "PBKDF2 : correct, mais plus facile à attaquer sur carte graphique qu'Argon2id.",
-        ),
-    },
-    "kdf_strength": {
-        "normal": (GOOD, "Force normale : bon compromis entre rapidité et résistance."),
-        "fort": (GOOD, "Force élevée : chaque essai d'un attaquant coûte deux fois plus cher."),
-        "max": (GOOD, "Force maximale : le plus résistant, quelques secondes d'attente."),
-    },
-    "salt": {
-        "16": (GOOD, "Sel de 16 octets : empêche les attaques précalculées."),
-        "32": (GOOD, "Sel de 32 octets : même protection, un peu plus de marge."),
-        "0": (
-            WEAK,
-            "Sans sel : un attaquant peut précalculer ses essais une fois pour tous les fichiers.",
-        ),
-    },
-}
-SHORT_PASSWORD = (
-    WEAK,
-    f"Mot de passe de moins de {MIN_PASSWORD_LENGTH} caractères : facile à deviner.",
-)
+def passphrase_level(length: int) -> str:
+    if length >= VERY_STRONG_PASSPHRASE:
+        return VERY_STRONG
+    return STRONG if length >= MIN_PASSPHRASE else WEAK
 
 
 @dataclass(frozen=True)
 class Rating:
     level: str
-    reasons: list[tuple[str, str]]  # (niveau, explication), une ligne par réglage
+    reasons: list[tuple[str, str]]  # (niveau, clé de traduction de l'explication)
 
     @property
     def icon(self) -> str:
-        return LEVELS[self.level]["icon"]
+        return ICONS[self.level]
 
     @property
-    def label(self) -> str:
-        return LEVELS[self.level]["label"]
+    def label_key(self) -> str:
+        return f"level.{self.level}"
 
 
-def rate(choices: dict[str, str]) -> Rating:
-    """Note un ensemble de réglages : le niveau global est celui du pire réglage."""
-    reasons = [RULES[k][v] for k, v in choices.items() if k in RULES and v in RULES[k]]
-    level = max((lvl for lvl, _ in reasons), key=_ORDER.index, default=GOOD)
+def rate(choices: dict[str, str], *, no_passphrase: bool = False) -> Rating:
+    """Note un ensemble de réglages : le niveau global est celui du pire réglage.
+
+    no_passphrase : clé privée enregistrée sans phrase secrète → « aucune protection »,
+    et les réglages de KDF n'ont plus de sens.
+    """
+    reasons = []
+    for setting, value in choices.items():
+        if no_passphrase and setting in ("kdf", "kdf_strength", "salt"):
+            continue
+        level = RATINGS.get(setting, {}).get(value)
+        if level:
+            reasons.append((level, f"rating.{setting}.{value}"))
+    if no_passphrase:
+        reasons.append((NONE, "rating.no_passphrase"))
+    level = max((lvl for lvl, _ in reasons), key=ORDER.index, default=STRONG)
     return Rating(level, reasons)
 
 
+def preset_of(choices: dict[str, str]) -> str:
+    """Le niveau dont les réglages correspondent exactement, sinon « personnalisé »."""
+    for level, preset in PRESETS.items():
+        if all(choices.get(k) == v for k, v in preset.items()):
+            return level
+    return CUSTOM
+
+
 def rules_json() -> str:
-    """Règles transmises à la page pour l'indicateur en direct (static/app.js)."""
+    """Tout ce dont la page a besoin pour l'indicateur en direct, déjà traduit."""
     return json.dumps(
         {
-            "levels": LEVELS,
-            "rules": RULES,
-            "minPassword": MIN_PASSWORD_LENGTH,
-            "shortPassword": SHORT_PASSWORD,
+            "order": ORDER,
+            "icons": ICONS,
+            "labels": {lvl: t(f"level.{lvl}") for lvl in ORDER},
+            "levelHelp": {lvl: t(f"level.{lvl}.help") for lvl in [*ORDER, CUSTOM]},
+            "ratings": RATINGS,
+            "reasons": {
+                f"{s}.{v}": t(f"rating.{s}.{v}") for s, values in RATINGS.items() for v in values
+            },
+            "noPassphrase": t("rating.no_passphrase"),
+            "presets": PRESETS,
+            "minPassphrase": MIN_PASSPHRASE,
+            "veryStrongPassphrase": VERY_STRONG_PASSPHRASE,
+            "passphraseReasons": {
+                lvl: t(f"rating.passphrase.{lvl}") for lvl in (VERY_STRONG, STRONG, WEAK)
+            },
         },
         ensure_ascii=False,
     )

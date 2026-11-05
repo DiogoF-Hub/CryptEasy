@@ -1,35 +1,33 @@
 {% extends "base.html" %}
-{% from "_macros.html" import csrf, key_head %}
-{% block title %}Contacts{% endblock %}
+{% from "_macros.html" import csrf, key_head, choose_button with context %}
+{% block title %}{{ t('contacts.title') }}{% endblock %}
 {% block content %}
-<h1>Contacts</h1>
+<h1>{{ t('contacts.title') }}</h1>
 
 <div class="two-col">
   <section class="card">
-    <h2>Ajouter un contact</h2>
-    <form method="post" action="{{ url_for('contacts.add') }}" enctype="multipart/form-data" class="form" autocomplete="off">
+    <h2>{{ t('contacts.add_title') }}</h2>
+    <form method="post" action="{{ url_for('contacts.add') }}" class="form" autocomplete="off">
       {{ csrf() }}
-      <label>Nom du contact
+      <label>{{ t('contacts.name') }}
         <input type="text" name="name" required maxlength="64" value="{{ form.get('name', '') }}">
       </label>
-      <label>Fichier .pem de sa clé publique
-        <input type="file" name="keyfile" accept=".pem,.pub,.txt">
-      </label>
+      <div class="field">
+        <span class="field-label">{{ t('contacts.key_file') }}</span>
+        {{ choose_button('public-key', 'key_selection', t('common.choose_file')) }}
+      </div>
       <details class="advanced" {% if form.get('keytext') %}open{% endif %}>
-        <summary>Ou coller sa clé publique</summary>
+        <summary>{{ t('contacts.paste') }}</summary>
         <textarea name="keytext" rows="6" spellcheck="false"
                   placeholder="-----BEGIN PUBLIC KEY-----&#10;…">{{ form.get('keytext', '') }}</textarea>
       </details>
-      <button class="btn btn-primary" type="submit">Ajouter</button>
+      <button class="btn btn-primary" type="submit">{{ t('contacts.add_button') }}</button>
     </form>
   </section>
 
   <section class="card">
-    <h2>Mes contacts</h2>
-    <p class="notice">
-      <strong>Vérifiez chaque empreinte</strong> avec la personne, de vive voix (téléphone, en personne).
-      Si quelqu'un a remplacé sa clé pendant l'envoi, c'est le seul moyen de s'en rendre compte.
-    </p>
+    <h2>{{ t('contacts.list_title') }}</h2>
+    <p class="notice"><strong>{{ t('contacts.verify_title') }}</strong> {{ t('contacts.verify_text') }}</p>
     {% if contacts %}
     <ul class="key-list">
       {% for c in contacts %}
@@ -38,22 +36,20 @@
         <form method="post" action="{{ url_for('contacts.rename') }}" class="rename-form">
           {{ csrf() }}
           <input type="hidden" name="fingerprint" value="{{ c.fingerprint }}">
-          <label class="sr-only" for="rename-{{ loop.index }}">Nouveau nom</label>
+          <label class="sr-only" for="rename-{{ loop.index }}">{{ t('contacts.new_name') }}</label>
           <input id="rename-{{ loop.index }}" type="text" name="name" required maxlength="64" value="{{ c.name }}" autofocus>
-          <button class="btn btn-small btn-primary" type="submit">Enregistrer</button>
-          <a class="btn btn-small" href="{{ url_for('contacts.index') }}">Annuler</a>
+          <button class="btn btn-small btn-primary" type="submit">{{ t('common.save') }}</button>
+          <a class="btn btn-small" href="{{ url_for('contacts.index') }}">{{ t('common.cancel') }}</a>
         </form>
         <div class="fingerprint">{{ c.fingerprint }}</div>
         {% else %}
         {{ key_head(c) }}
         <div class="key-actions">
-          <a class="btn btn-small" href="{{ url_for('encrypt.index', contact=c.fingerprint) }}">Lui chiffrer un fichier</a>
-          <a class="btn btn-small btn-ghost" href="{{ url_for('contacts.index', renommer=c.fingerprint) }}">Renommer</a>
-          <form method="post" action="{{ url_for('contacts.remove') }}"
-                data-confirm="Supprimer le contact « {{ c.name }} » ?">
-            {{ csrf() }}
-            <input type="hidden" name="fingerprint" value="{{ c.fingerprint }}">
-            <button class="btn btn-small btn-ghost-danger" type="submit">Supprimer</button>
+          <a class="btn btn-small" href="{{ url_for('encrypt.index', contact=c.fingerprint) }}">{{ t('contacts.encrypt_for') }}</a>
+          <a class="btn btn-small btn-ghost" href="{{ url_for('contacts.index', renommer=c.fingerprint) }}">{{ t('contacts.rename') }}</a>
+          <form method="post" action="{{ url_for('contacts.remove') }}" data-confirm="{{ t('contacts.delete_confirm', name=c.name) }}">
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ c.fingerprint }}">
+            <button class="btn btn-small btn-ghost-danger" type="submit">{{ t('common.delete') }}</button>
           </form>
         </div>
         {% endif %}
@@ -61,7 +57,7 @@
       {% endfor %}
     </ul>
     {% else %}
-    <p class="empty">Aucun contact pour l'instant. Importez la clé publique d'un correspondant pour commencer.</p>
+    <p class="empty">{{ t('contacts.empty') }}</p>
     {% endif %}
   </section>
 </div>

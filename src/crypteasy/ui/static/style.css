@@ -31,6 +31,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; } /* même sur les éléments en display: flex */
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; min-height: 100vh; display: flex; flex-direction: column;
@@ -51,11 +52,6 @@ h2 { font-size: 1.1rem; margin: 0 0 1rem; }
 }
 .brand { display: flex; align-items: center; gap: .5rem; font-weight: 700; font-size: 1.15rem; color: var(--text); text-decoration: none; }
 nav { display: flex; gap: .25rem; flex-wrap: wrap; align-items: center; }
-.quit-form { margin: 0 0 0 .5rem; padding-left: .75rem; border-left: 1px solid var(--border); }
-.quit-btn { font: inherit; font-weight: 500; color: var(--muted); background: none; border: 0; cursor: pointer; padding: .4rem .75rem; border-radius: 8px; }
-.quit-btn:hover { background: var(--danger-soft); color: var(--danger); }
-.closed { margin: 4rem auto; text-align: center; }
-.closed h1 { margin: 1rem 0 .5rem; }
 nav a { color: var(--muted); text-decoration: none; padding: .4rem .75rem; border-radius: 8px; font-weight: 500; }
 nav a:hover { background: var(--bg); color: var(--text); }
 nav a[aria-current="page"] { background: var(--primary-soft); color: var(--primary); }
@@ -113,16 +109,6 @@ input[type=file] { font: inherit; font-size: .9rem; color: var(--muted); max-wid
   background: var(--primary); color: #fff; font-size: .85rem; font-weight: 700;
 }
 
-.dropzone {
-  position: relative; align-items: center; text-align: center; gap: .25rem !important;
-  border: 2px dashed var(--border); border-radius: var(--radius); padding: 1.75rem 1rem;
-  cursor: pointer; transition: border-color .15s, background .15s;
-}
-.dropzone:hover, .dropzone.dragover { border-color: var(--primary); background: var(--primary-soft); }
-.dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.dropzone-text { color: var(--muted); font-weight: 400; }
-.dropzone-name { font-weight: 600; color: var(--primary); word-break: break-all; }
-.dropzone-name:empty { display: none; }
 
 /* --- Boutons --- */
 .btn {
@@ -156,7 +142,6 @@ input[type=file] { font: inherit; font-size: .9rem; color: var(--muted); max-wid
 .alert { border-radius: 8px; padding: .75rem 1rem; margin-bottom: 1.25rem; border: 1px solid transparent; }
 .alert-error { background: var(--danger-soft); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 25%, transparent); }
 .alert-success { background: var(--success-soft); color: var(--success); border-color: color-mix(in srgb, var(--success) 25%, transparent); }
-.status { margin: 0; min-height: 1.4em; color: var(--success); font-size: .9rem; text-align: center; }
 
 @media (max-width: 560px) {
   .hero h1 { font-size: 1.6rem; }
@@ -216,8 +201,6 @@ input[type=file] { font: inherit; font-size: .9rem; color: var(--muted); max-wid
 .card-details[open] > summary { margin-bottom: 1rem; }
 .form label.check { flex-direction: row; align-items: center; gap: .5rem; font-weight: 500; }
 .check input { width: 1.05rem; height: 1.05rem; accent-color: var(--primary); }
-fieldset.extra-password { border: 0; border-left: 2px solid var(--primary-soft); margin: 0; padding: 0 0 0 .9rem; display: flex; flex-direction: column; gap: 1rem; }
-fieldset.extra-password[hidden] { display: none; }
 .optional { color: var(--muted); font-weight: 400; font-size: .85rem; }
 .btn-ghost { border-color: transparent; background: transparent; color: var(--muted); }
 .btn-ghost:hover { background: var(--bg); color: var(--text); border-color: transparent; }
@@ -226,3 +209,55 @@ fieldset.extra-password[hidden] { display: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .key-actions form { display: inline; }
 .pw-meter:not(.pw-weak):not(.pw-ok):not(.pw-good) .pw-bar { display: none; }
+
+/* --- Sélecteur de langue --- */
+.lang-form { margin: 0 0 0 .5rem; padding-left: .75rem; border-left: 1px solid var(--border); }
+.lang-form select { width: auto; padding: .3rem .5rem; font-size: .9rem; }
+
+/* --- Niveaux de sécurité (§ 4.2) --- */
+.tags { display: inline-flex; gap: .35rem; flex-wrap: wrap; }
+.level { font-size: .75rem; font-weight: 600; padding: .1rem .5rem; border-radius: 999px; border: 1px solid transparent; }
+.level-very_strong, .level-strong { color: var(--success); background: var(--success-soft); }
+.level-medium { color: var(--warn); background: var(--warn-soft); }
+.level-weak, .level-none { color: var(--danger); background: var(--danger-soft); }
+.rating-very_strong, .rating-strong { border-left-color: var(--success); }
+.rating-medium { border-left-color: var(--warn); }
+.rating-weak, .rating-none { border-left-color: var(--danger); background: var(--danger-soft); }
+.rating-reasons .lvl-medium { color: var(--warn); }
+.rating-reasons .lvl-weak, .rating-reasons .lvl-none { color: var(--danger); }
+.pw-ok .pw-bar span { background: var(--warn); }
+.danger-box { border: 1px solid var(--danger); background: var(--danger-soft); color: var(--text); border-radius: 8px; padding: .75rem .9rem; display: flex; flex-direction: column; gap: .5rem; }
+.danger-box p { margin: 0; font-size: .9rem; }
+.passphrase-block { display: flex; flex-direction: column; gap: 1rem; }
+.warn-line { margin: 0 0 .5rem; color: var(--danger); font-size: .85rem; }
+
+/* --- Choix de fichiers (boîtes natives) --- */
+.field { display: flex; flex-direction: column; gap: .35rem; }
+.field-label { font-weight: 500; font-size: .95rem; }
+.chooser { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.chooser-name { font-weight: 600; color: var(--primary); word-break: break-all; }
+.chooser-error { color: var(--danger); font-weight: 500; }
+.source-buttons { display: flex; gap: .5rem; flex-wrap: wrap; }
+.selection { border: 1px solid var(--border); border-radius: 8px; padding: .75rem .9rem; background: var(--bg); }
+.selection-name { font-weight: 600; word-break: break-all; }
+.selection-meta { color: var(--muted); font-size: .9rem; margin-top: .2rem; }
+.selection-warn { color: var(--warn); font-size: .85rem; margin-top: .3rem; }
+.key-found { font-weight: 500; }
+[data-key-step] { display: flex; flex-direction: column; gap: 1rem; }
+.btn-link { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--primary); font: inherit; font-size: .9rem; text-decoration: underline; cursor: pointer; }
+
+/* --- Progression et résultat (§ 5.5) --- */
+.progress-block { display: flex; flex-direction: column; gap: .4rem; }
+.progress { height: 10px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.progress span { display: block; height: 100%; width: 0; background: var(--primary); transition: width .4s; }
+.progress-text { font-size: .9rem; color: var(--muted); }
+.result { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
+.result .alert { margin: 0; word-break: break-all; width: 100%; }
+.save-choice { display: flex; flex-direction: column; gap: .6rem; }
+.save-choice p { margin: 0; font-weight: 500; }
+
+/* --- Panneau « changer la protection » --- */
+.subpanel { margin-top: .6rem; border-top: 1px dashed var(--border); padding-top: .5rem; }
+.subpanel > summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
+.subpanel[open] > summary { margin-bottom: .75rem; }
+.rating-reasons { list-style: disc; }

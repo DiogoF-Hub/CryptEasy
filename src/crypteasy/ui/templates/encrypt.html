@@ -1,111 +1,73 @@
 {% extends "base.html" %}
-{% from "_macros.html" import csrf, rating_box, pw_meter %}
-{% block title %}Chiffrer{% endblock %}
+{% from "_macros.html" import rating_box with context %}
+{% block title %}{{ t('encrypt.title') }}{% endblock %}
 {% block content %}
-<h1>Chiffrer un fichier</h1>
+<h1>{{ t('encrypt.title') }}</h1>
 
-<section class="card narrow">
+<section class="card narrow" data-encrypt-page>
   {% if not contacts and not identities %}
-  <p class="empty">Pour chiffrer, il faut la clé publique du destinataire.
-    <a href="{{ url_for('contacts.index') }}">Ajoutez un contact</a>, ou
-    <a href="{{ url_for('keys.index') }}">créez votre propre paire de clés</a>.</p>
+  <p class="empty">{{ t('encrypt.no_recipient') }}
+    <a href="{{ url_for('contacts.index') }}">{{ t('encrypt.add_contact') }}</a> ·
+    <a href="{{ url_for('keys.index') }}">{{ t('encrypt.create_key') }}</a></p>
   {% else %}
-  <form method="post" action="{{ url_for('encrypt.run') }}" enctype="multipart/form-data"
-        class="form" data-download autocomplete="off">
-    {{ csrf() }}
+  <div class="form">
+    <div class="step"><span class="step-num">1</span> {{ t('encrypt.step_source') }}</div>
+    <div class="source-buttons">
+      <button type="button" class="btn" data-pick="file">{{ t('encrypt.pick_file') }}</button>
+      <button type="button" class="btn" data-pick="folder">{{ t('encrypt.pick_folder') }}</button>
+    </div>
+    <div class="selection" data-selection hidden>
+      <div class="selection-name" data-sel-name></div>
+      <div class="selection-meta" data-sel-meta></div>
+      <div class="selection-warn" data-sel-big hidden>{{ t('encrypt.big_file') }}</div>
+    </div>
 
-    <div class="step"><span class="step-num">1</span> Le fichier</div>
-    <label class="dropzone">
-      <input type="file" name="file" required>
-      <span class="dropzone-text">Glissez un fichier ici ou <u>parcourez</u></span>
-      <span class="dropzone-name"></span>
-      <small>Jusqu'à 4 Gio</small>
-    </label>
-
-    <div class="step"><span class="step-num">2</span> Le destinataire</div>
-    <label>Destinataire
+    <div class="step"><span class="step-num">2</span> {{ t('encrypt.step_recipient') }}</div>
+    <label>{{ t('encrypt.recipient') }}
       <select name="recipient" required data-rate="key_type">
-        <option value="">Choisir…</option>
+        <option value="">{{ t('common.choose') }}</option>
         {% if contacts %}
-        <optgroup label="Contacts">
+        <optgroup label="{{ t('encrypt.group_contacts') }}">
           {% for c in contacts %}
-          <option value="{{ c.fingerprint }}" data-rate-value="{{ c.kind|lower }}" {% if c.fingerprint == selected %}selected{% endif %}>{{ c.name }} ({{ c.kind }})</option>
+          <option value="{{ c.fingerprint }}" data-rate-value="{{ c.key_type }}" {% if c.fingerprint == selected %}selected{% endif %}>{{ c.name }} ({{ c.kind }})</option>
           {% endfor %}
         </optgroup>
         {% endif %}
         {% if identities %}
-        <optgroup label="Mes clés">
+        <optgroup label="{{ t('encrypt.group_mine') }}">
           {% for k in identities %}
-          <option value="{{ k.fingerprint }}" data-rate-value="{{ k.kind|lower }}" {% if k.fingerprint == selected %}selected{% endif %}>{{ k.name }} ({{ k.kind }})</option>
+          <option value="{{ k.fingerprint }}" data-rate-value="{{ k.key_type }}" {% if k.fingerprint == selected %}selected{% endif %}>{{ k.name }} ({{ k.kind }})</option>
           {% endfor %}
         </optgroup>
         {% endif %}
       </select>
     </label>
 
-    <div class="step"><span class="step-num">3</span> Sécurité</div>
-    <details class="advanced" {% if form.cipher and form.cipher != defaults.cipher or form.use_password or form.out_name %}open{% endif %}>
-      <summary>Réglages avancés (par défaut : recommandés)</summary>
-      <div class="form">
-        <label>Chiffrement du fichier
-          <select name="cipher" data-rate="cipher">
-            {% for value, label in ciphers.items() %}
-            <option value="{{ value }}" {% if value == (form.cipher or defaults.cipher) %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </label>
-
-        <label class="check">
-          <input type="checkbox" name="use_password" value="1" data-toggle=".extra-password" {% if form.use_password %}checked{% endif %}>
-          Ajouter un mot de passe supplémentaire
-        </label>
-        <fieldset class="extra-password">
-          <legend class="sr-only">Mot de passe supplémentaire</legend>
-          <p class="hint">Le destinataire devra connaître ce mot de passe <strong>en plus</strong> de sa clé privée. Transmettez-le par un autre canal que le fichier.</p>
-          <label>Mot de passe du fichier
-            <input type="password" name="file_password" autocomplete="new-password"
-                   data-rate-password data-rate-when="use_password">
-            {{ pw_meter('file_password') }}
-          </label>
-          <label>Confirmer
-            <input type="password" name="file_password2" autocomplete="new-password">
-          </label>
-          <label>Dérivation de clé (KDF)
-            <select name="kdf" data-rate="kdf" data-rate-when="use_password">
-              {% for value, label in kdfs.items() %}
-              <option value="{{ value }}" {% if value == (form.kdf or defaults.kdf) %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label>Force de la KDF
-            <select name="kdf_strength" data-rate="kdf_strength" data-rate-when="use_password">
-              {% for value, label in kdf_strengths.items() %}
-              <option value="{{ value }}" {% if value == (form.kdf_strength or defaults.kdf_strength) %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label>Sel
-            <select name="salt" data-rate="salt" data-rate-when="use_password">
-              {% for value, label in salts.items() %}
-              <option value="{{ value }}" {% if value == (form.salt or defaults.salt) %}selected{% endif %} {% if value == '0' %}data-pbkdf2-only{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </label>
-        </fieldset>
-
-        <label>Nom du paquet (facultatif)
-          <input type="text" name="out_name" maxlength="200" placeholder="ex. dossier-mars" value="{{ form.out_name }}">
-          <small>Par défaut un nom neutre (encrypted_date.zip) : le nom d'origine reste caché à l'intérieur.</small>
-        </label>
-      </div>
+    <div class="step"><span class="step-num">3</span> {{ t('encrypt.step_security') }}</div>
+    <details class="advanced">
+      <summary>{{ t('encrypt.advanced') }}</summary>
+      <label>{{ t('encrypt.cipher') }}
+        <select name="cipher" data-rate="cipher">
+          {% for v in ciphers %}<option value="{{ v }}" {% if v == default_cipher %}selected{% endif %}>{{ t('option.cipher.' ~ v) }}</option>{% endfor %}
+        </select>
+        <small>{{ t('encrypt.cipher_help') }}</small>
+      </label>
     </details>
-
     {{ rating_box(rating, rules) }}
 
-    <button class="btn btn-primary btn-wide" type="submit" data-busy="Chiffrement…">Chiffrer et télécharger</button>
-    <p class="status" aria-live="polite"></p>
-  </form>
-  <p class="hint">Vous obtenez un paquet <code>{{ ext }}</code> à envoyer par le moyen de votre choix (mail, clé USB…) : seul le destinataire pourra l'ouvrir.</p>
+    <button class="btn btn-primary btn-wide" type="button" data-run disabled>{{ t('encrypt.button') }}</button>
+    <p class="hint">{{ t('encrypt.save_hint') }}</p>
+
+    <div class="progress-block" data-progress hidden>
+      <div class="progress"><span data-progress-bar></span></div>
+      <div class="progress-text" data-progress-text aria-live="polite"></div>
+    </div>
+    <div class="result" data-result hidden>
+      <div class="alert alert-success" data-result-text role="status"></div>
+      <button type="button" class="btn" data-reveal>{{ t('common.open_folder') }}</button>
+    </div>
+    <div class="alert alert-error" data-error role="alert" hidden></div>
+  </div>
   {% endif %}
 </section>
 {% endblock %}
