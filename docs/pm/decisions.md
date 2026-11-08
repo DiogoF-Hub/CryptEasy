@@ -1,0 +1,21 @@
+# Decision log
+
+One line per decision or change of scope, written when it's made. This is what the report uses for "changes to the project goals" and "choices made to clarify vague points in the CDC".
+
+| Date | Decision | Why | Proposed by |
+|---|---|---|---|
+| Sep 15 | Topic: CryptEasy, a file encryption tool with a graphical interface, hybrid encryption (AES + RSA / elliptic curve), packaged as a standalone executable | see the CDC | team |
+| Oct 15 | GUI with **Flask**, not Streamlit (the CDC left the choice open) | the standalone executable is required, and Streamlit can't be packaged reliably with PyInstaller | team |
+| Oct 15 | One long-lived branch per member (`*-dev`), changes reach `main` only through pull requests, CI on every push | work in parallel without breaking `main`, keep a clear history of who did what | Sam |
+| Oct 18 | The app runs in its **own window (pywebview)**, not in the browser | it should feel like a normal desktop program | Diogo |
+| Oct 15 to 18 | Encrypted output is **one `.zip` package** with `key.enc` + `file.enc` | one file to send, and the encryption settings travel with it | Diogo |
+| Oct 15 to 18 | The passphrase, KDF and salt protect the **private key on disk**; no per-file password | a per-file password would have to be sent through a safe channel, which is exactly the problem public keys solve | Diogo |
+| Oct 15 to 18 | **Security levels** (very strong → no protection) to choose the settings in one click | safe defaults for beginners, tunable for advanced users (CDC) | Diogo |
+| Oct 15 to 18 | Folders can be encrypted (zipped automatically by the app) | the user shouldn't have to zip a folder by hand | Diogo |
+| Oct 18 | Interface in **French and English**, one translation file per language | adding a language later is just adding a file | Diogo |
+| Oct 18 | An Ed25519 signing key is generated with every key pair from day 1; file signing itself stays a stretch goal | adding signing later then changes nothing for existing keys and contacts | Diogo |
+| Oct 18 | `main` is protected on GitHub: only the repository owner merges, after reviewing the PR | nothing reaches `main` without being checked | Diogo |
+| Nov 8 | **Re-plan:** 3 one-week sprints instead of the CDC's mostly sequential phases ([planning v2](planning-v2.md)) | the development started about 5 weeks late, 3 weeks left: a mostly sequential plan can't absorb the delay | Diogo |
+| Nov 8 | **Roles split by skill** instead of by component (Yani moves to report, testing and slides) | the component split didn't match who could do what (CDC risk R2) | Diogo |
+| Nov 8 | **Scope:** file signing not planned (stretch only), Linux binary optional, macOS build not a priority (only if time is left) | not enough time; keep the effort on the Windows exe | Diogo |
+| Nov 8 | Tasks tracked on a **GitHub board**: one issue per task, estimate and actual time | needed for the planned vs actual and estimated vs actual parts of the report | Diogo |
