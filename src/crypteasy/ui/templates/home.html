@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ t('home.title') }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>{{ t('home.headline') }}</h1>
+  <p class="lead">{{ t('home.lead') }}</p>
+</section>
+
+{% if not identities %}
+<div class="onboarding">
+  <span class="step-num">1</span>
+  <div>
+    <strong>{{ t('home.onboarding_title') }}</strong>
+    <p>{{ t('home.onboarding_text') }}</p>
+    <a class="btn btn-primary" href="{{ url_for('keys.index') }}">{{ t('home.onboarding_button') }}</a>
+  </div>
+</div>
+{% endif %}
+
+<div class="actions-grid">
+  <a class="action-card" href="{{ url_for('encrypt.index') }}">
+    <span class="action-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    </span>
+    <span class="action-title">{{ t('home.card_encrypt') }}</span>
+    <span class="action-desc">{{ t('home.card_encrypt_desc') }}</span>
+  </a>
+  <a class="action-card" href="{{ url_for('decrypt.index') }}">
+    <span class="action-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+    </span>
+    <span class="action-title">{{ t('home.card_decrypt') }}</span>
+    <span class="action-desc">{{ t('home.card_decrypt_desc') }}</span>
+  </a>
+  <a class="action-card" href="{{ url_for('keys.index') }}">
+    <span class="action-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/></svg>
+    </span>
+    <span class="action-title">{{ t('home.card_keys') }}</span>
+    <span class="action-desc">{{ t('home.card_keys_desc', n=identities|length) }}</span>
+  </a>
+  <a class="action-card" href="{{ url_for('contacts.index') }}">
+    <span class="action-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 11h6M20 8v6"/></svg>
+    </span>
+    <span class="action-title">{{ t('home.card_contacts') }}</span>
+    <span class="action-desc">{{ t('home.card_contacts_desc', n=contacts|length) }}</span>
+  </a>
+</div>
+{% endblock %}

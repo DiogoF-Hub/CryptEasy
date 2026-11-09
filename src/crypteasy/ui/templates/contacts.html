@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, key_head, choose_button with context %}
+{% block title %}{{ t('contacts.title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('contacts.title') }}</h1>
+
+<div class="two-col">
+  <section class="card">
+    <h2>{{ t('contacts.add_title') }}</h2>
+    <form method="post" action="{{ url_for('contacts.add') }}" class="form" autocomplete="off">
+      {{ csrf() }}
+      <label>{{ t('contacts.name') }}
+        <input type="text" name="name" required maxlength="64" value="{{ form.get('name', '') }}">
+      </label>
+      <div class="field">
+        <span class="field-label">{{ t('contacts.key_file') }}</span>
+        {{ choose_button('public-key', 'key_selection', t('common.choose_file')) }}
+      </div>
+      <details class="advanced" {% if form.get('keytext') %}open{% endif %}>
+        <summary>{{ t('contacts.paste') }}</summary>
+        <textarea name="keytext" rows="6" spellcheck="false"
+                  placeholder="-----BEGIN PUBLIC KEY-----&#10;…">{{ form.get('keytext', '') }}</textarea>
+      </details>
+      <button class="btn btn-primary" type="submit">{{ t('contacts.add_button') }}</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>{{ t('contacts.list_title') }}</h2>
+    <p class="notice"><strong>{{ t('contacts.verify_title') }}</strong> {{ t('contacts.verify_text') }}</p>
+    {% if contacts %}
+    <ul class="key-list">
+      {% for c in contacts %}
+      <li class="key-item">
+        {% if editing == c.fingerprint %}
+        <form method="post" action="{{ url_for('contacts.rename') }}" class="rename-form">
+          {{ csrf() }}
+          <input type="hidden" name="fingerprint" value="{{ c.fingerprint }}">
+          <label class="sr-only" for="rename-{{ loop.index }}">{{ t('contacts.new_name') }}</label>
+          <input id="rename-{{ loop.index }}" type="text" name="name" required maxlength="64" value="{{ c.name }}" autofocus>
+          <button class="btn btn-small btn-primary" type="submit">{{ t('common.save') }}</button>
+          <a class="btn btn-small" href="{{ url_for('contacts.index') }}">{{ t('common.cancel') }}</a>
+        </form>
+        <div class="fingerprint">{{ c.fingerprint }}</div>
+        {% else %}
+        {{ key_head(c) }}
+        <div class="key-actions">
+          <a class="btn btn-small" href="{{ url_for('encrypt.index', contact=c.fingerprint) }}">{{ t('contacts.encrypt_for') }}</a>
+          <a class="btn btn-small btn-ghost" href="{{ url_for('contacts.index', renommer=c.fingerprint) }}">{{ t('contacts.rename') }}</a>
+          <form method="post" action="{{ url_for('contacts.remove') }}" data-confirm="{{ t('contacts.delete_confirm', name=c.name) }}">
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ c.fingerprint }}">
+            <button class="btn btn-small btn-ghost-danger" type="submit">{{ t('common.delete') }}</button>
+          </form>
+        </div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">{{ t('contacts.empty') }}</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

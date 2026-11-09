@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ t('decrypt.title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('decrypt.title') }}</h1>
+
+<section class="card narrow" data-decrypt-page>
+  <div class="form">
+    <div class="step"><span class="step-num">1</span> {{ t('decrypt.step_package') }}</div>
+    <div class="source-buttons">
+      <button type="button" class="btn" data-pick="package">{{ t('decrypt.pick_package') }}</button>
+    </div>
+    <div class="selection" data-selection hidden>
+      <div class="selection-name" data-sel-name></div>
+      <div class="selection-meta" data-sel-meta></div>
+      <div class="selection-warn" data-sel-big hidden>{{ t('encrypt.big_file') }}</div>
+    </div>
+
+    <div data-key-step hidden>
+      <div class="step"><span class="step-num">2</span> {{ t('decrypt.step_key') }}</div>
+      <div class="key-found" data-key-found hidden></div>
+      <div class="alert alert-error" data-key-missing hidden></div>
+      <div class="key-file-choice" data-key-file-block hidden>
+        <p class="hint">{{ t('decrypt.key_file_help') }}</p>
+        <div class="chooser" data-choose="key-file" data-field="key_selection">
+          <input type="hidden" name="key_selection" value="">
+          <button type="button" class="btn">{{ t('decrypt.use_key_file') }}</button>
+          <span class="chooser-name" aria-live="polite"></span>
+        </div>
+      </div>
+      <button type="button" class="btn-link" data-show-key-file hidden>{{ t('decrypt.use_other_key') }}</button>
+
+      <label data-passphrase-field hidden>{{ t('decrypt.passphrase') }}
+        <input type="password" name="passphrase" autocomplete="current-password">
+      </label>
+      <p class="hint" data-no-passphrase-note hidden>{{ t('decrypt.no_passphrase_note') }}</p>
+
+      <button class="btn btn-primary btn-wide" type="button" data-run disabled>{{ t('decrypt.button') }}</button>
+    </div>
+
+    <div class="progress-block" data-progress hidden>
+      <div class="progress"><span data-progress-bar></span></div>
+      <div class="progress-text" data-progress-text aria-live="polite"></div>
+    </div>
+
+    <div class="save-choice" data-save-choice hidden>
+      <p data-save-text></p>
+      <div class="source-buttons" data-save-file hidden>
+        <button type="button" class="btn btn-primary" data-save="file">{{ t('decrypt.save_file') }}</button>
+      </div>
+      <div class="source-buttons" data-save-folder hidden>
+        <button type="button" class="btn" data-save="zip">{{ t('decrypt.keep_zip') }}</button>
+        <button type="button" class="btn btn-primary" data-save="extract">{{ t('decrypt.extract') }}</button>
+      </div>
+    </div>
+    <div class="result" data-result hidden>
+      <div class="alert alert-success" data-result-text role="status"></div>
+      <button type="button" class="btn" data-reveal>{{ t('common.open_folder') }}</button>
+    </div>
+    <div class="alert alert-error" data-error role="alert" hidden></div>
+  </div>
+</section>
+{% endblock %}

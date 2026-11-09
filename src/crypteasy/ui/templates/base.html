@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_value() }}">
+  <title>{% block title %}CryptEasy{% endblock %} · CryptEasy</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  {# Textes pour le JavaScript : bloc de données (non exécuté), compatible avec la CSP #}
+  <script type="application/json" id="i18n">{{ js_strings()|tojson }}</script>
+</head>
+<body>
+  {% if demo_mode %}
+  <div class="demo-banner" role="alert">
+    <strong>{{ t('demo.title') }}</strong> {{ t('demo.text') }}
+  </div>
+  {% endif %}
+
+  {% if not bare %}
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('home.index') }}">
+      <img src="{{ url_for('static', filename='logo.svg') }}" alt="" width="28" height="28">
+      CryptEasy
+    </a>
+    {% set bp = request.blueprint %}
+    <nav aria-label="{{ t('nav.label') }}">
+      <a href="{{ url_for('encrypt.index') }}" {% if bp == 'encrypt' %}aria-current="page"{% endif %}>{{ t('nav.encrypt') }}</a>
+      <a href="{{ url_for('decrypt.index') }}" {% if bp == 'decrypt' %}aria-current="page"{% endif %}>{{ t('nav.decrypt') }}</a>
+      <a href="{{ url_for('keys.index') }}" {% if bp == 'keys' %}aria-current="page"{% endif %}>{{ t('nav.keys') }}</a>
+      <a href="{{ url_for('contacts.index') }}" {% if bp == 'contacts' %}aria-current="page"{% endif %}>{{ t('nav.contacts') }}</a>
+      <a href="{{ url_for('home.info') }}" {% if request.endpoint == 'home.info' %}aria-current="page"{% endif %}>{{ t('nav.info') }}</a>
+      <form method="post" action="{{ url_for('home.language') }}" class="lang-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_value() }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <label class="sr-only" for="lang-select">{{ t('nav.language') }}</label>
+        <select id="lang-select" name="lang" data-autosubmit>
+          {% for code, label in languages() %}
+          <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button type="submit">OK</button></noscript>
+      </form>
+    </nav>
+  </header>
+  {% endif %}
+
+  <main class="container">
+    {% for category, msg in get_flashed_messages(with_categories=true) %}
+      <div class="alert alert-{{ category }}" role="status">{{ msg }}</div>
+    {% endfor %}
+    {% if error %}
+      <div class="alert alert-error" role="alert">{{ error }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">CryptEasy · SAÉ 5.02 · IUT Nancy-Brabois</footer>
+</body>
+</html>

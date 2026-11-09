@@ -4,10 +4,20 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "flask>=3.1.3",
+    "flask-wtf>=1.3.0",
+    "pywebview>=6.2.1",
+    "waitress>=3.0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "pytest>=9.2.0",
     "ruff==0.16.9",
 ]
 
@@ -21,3 +31,7 @@ select = ["E", "W", "F", "I", "B", "UP", "S"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"] # pytest uses assert
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: tests longs (gros fichiers), exclus de `make test`"]

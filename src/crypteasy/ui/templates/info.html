@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ t('info.title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('info.title') }}</h1>
+
+<div class="info-grid">
+  <section class="card">
+    <h2>{{ t('info.keys_title') }}</h2>
+    <p>{{ t('info.keys_intro') }}</p>
+    <ul class="info-list">
+      <li><strong>{{ t('info.public_key') }}</strong> {{ t('info.public_key_text') }}</li>
+      <li><strong>{{ t('info.private_key') }}</strong> {{ t('info.private_key_text') }}</li>
+    </ul>
+    <p>{{ t('info.only_public_shared') }}</p>
+  </section>
+
+  <section class="card">
+    <h2>{{ t('info.hybrid_title') }}</h2>
+    <ol class="flow">
+      {% for n in range(1, 5) %}
+      <li><span class="flow-step">{{ n }}</span><span>{{ t('info.hybrid_step' ~ n) }}</span></li>
+      {% endfor %}
+    </ol>
+    <p class="hint">{{ t('info.hybrid_why') }}</p>
+  </section>
+</div>
+
+<section class="card">
+  <h2>{{ t('info.levels_title') }}</h2>
+  <p>{{ t('info.levels_intro') }}</p>
+  <div class="table-wrap">
+    <table class="format">
+      <thead><tr>
+        <th>{{ t('info.col_level') }}</th><th>{{ t('protect.key_type') }}</th><th>{{ t('encrypt.cipher') }}</th>
+        <th>{{ t('protect.kdf') }}</th><th>{{ t('protect.kdf_strength') }}</th><th>{{ t('protect.salt') }}</th>
+        <th>{{ t('protect.passphrase') }}</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>{{ icons.very_strong }} {{ t('level.very_strong') }}</td><td>X25519 / RSA-4096</td><td>AES-256-GCM</td><td>Argon2id</td><td>{{ t('option.kdf_strength.max') }}</td><td>32</td><td>16+</td></tr>
+        <tr><td>{{ icons.strong }} {{ t('level.strong') }}</td><td>X25519 / RSA-3072</td><td>AES-256-GCM</td><td>Argon2id</td><td>{{ t('option.kdf_strength.normal') }}</td><td>16</td><td>12+</td></tr>
+        <tr><td>{{ icons.medium }} {{ t('level.medium') }}</td><td>RSA-2048</td><td>AES-128-GCM</td><td>PBKDF2</td><td>{{ t('option.kdf_strength.normal') }}</td><td>16</td><td>12+</td></tr>
+        <tr><td>{{ icons.weak }} {{ t('level.weak') }}</td><td>RSA-2048</td><td>AES-128-GCM</td><td>PBKDF2</td><td>{{ t('option.kdf_strength.normal') }}</td><td>{{ t('info.none') }}</td><td>12+</td></tr>
+        <tr><td>{{ icons.none }} {{ t('level.none') }}</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>{{ t('info.none') }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="info-list">
+    {% for lvl in levels %}<li><strong>{{ t('level.' ~ lvl) }}</strong> — {{ t('level.' ~ lvl ~ '.help') }}</li>{% endfor %}
+  </ul>
+  <p class="hint">{{ t('info.levels_note') }}</p>
+</section>
+
+<div class="info-grid">
+  <section class="card">
+    <h2>{{ t('info.salt_title') }}</h2>
+    <p>{{ t('info.salt_text1') }}</p>
+    <p>{{ t('info.salt_text2') }}</p>
+  </section>
+  <section class="card">
+    <h2>{{ t('info.fingerprint_title') }}</h2>
+    <p>{{ t('info.fingerprint_text1') }}</p>
+    <p>{{ t('info.fingerprint_text2') }}</p>
+  </section>
+</div>
+
+<section class="card">
+  <h2>{{ t('info.format_title') }}</h2>
+  <p>{{ t('info.format_intro') }}</p>
+  <div class="table-wrap">
+    <table class="format">
+      <thead><tr><th>{{ t('info.col_file') }}</th><th>{{ t('info.col_content') }}</th><th>{{ t('info.col_readable') }}</th></tr></thead>
+      <tbody>
+        <tr><td><code>key.enc</code></td><td>{{ t('info.format_key') }}</td><td>{{ t('common.no') }}</td></tr>
+        <tr><td><code>file.enc</code></td><td>{{ t('info.format_file') }}</td><td>{{ t('info.format_file_readable') }}</td></tr>
+        <tr><td><code>signature.sig</code></td><td>{{ t('info.format_sig') }}</td><td>{{ t('common.yes') }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="hint">{{ t('info.format_note') }}</p>
+</section>
+
+<div class="info-grid">
+  <section class="card">
+    <h2>{{ t('info.tips_title') }}</h2>
+    <ul class="info-list">
+      {% for n in range(1, 5) %}<li>{{ t('info.tip' ~ n) }}</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="card">
+    <h2>{{ t('info.not_title') }}</h2>
+    <ul class="info-list">
+      {% for n in range(1, 5) %}<li>{{ t('info.not' ~ n) }}</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

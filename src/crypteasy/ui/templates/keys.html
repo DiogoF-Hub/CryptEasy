@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, key_head, rating_box, protection_fields, choose_button with context %}
+{% block title %}{{ t('keys.title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('keys.title') }}</h1>
+
+<div class="two-col">
+  <div class="stack">
+    <section class="card">
+      <h2>{{ t('keys.create_title') }}</h2>
+      <form method="post" action="{{ url_for('keys.create') }}" class="form" autocomplete="off" data-protection>
+        {{ csrf() }}
+        <label>{{ t('keys.name') }}
+          <input type="text" name="name" required maxlength="64" placeholder="{{ t('keys.name_placeholder') }}"
+                 value="{{ form.get('name', '') }}">
+        </label>
+        {{ protection_fields(levels, level, choices, options, form, icons) }}
+        {{ rating_box(rating, rules) }}
+        <button class="btn btn-primary" type="submit" data-busy="{{ t('keys.generating') }}">{{ t('keys.generate') }}</button>
+      </form>
+    </section>
+
+    <details class="card card-details" {% if panel == 'import' %}open{% endif %}>
+      <summary><h2>{{ t('keys.import_title') }}</h2></summary>
+      <form method="post" action="{{ url_for('keys.import_private') }}" class="form" autocomplete="off" data-protection>
+        {{ csrf() }}
+        <p class="hint">{{ t('keys.import_help') }}</p>
+        <label>{{ t('keys.name') }}
+          <input type="text" name="name" required maxlength="64" value="{{ form.get('import_name', '') }}">
+        </label>
+        <div class="field">
+          <span class="field-label">{{ t('keys.import_file') }}</span>
+          {{ choose_button('key-file', 'key_selection', t('common.choose_file')) }}
+        </div>
+        <label>{{ t('keys.current_passphrase') }} <span class="optional">{{ t('keys.current_passphrase_optional') }}</span>
+          <input type="password" name="current_passphrase" autocomplete="off">
+        </label>
+        <p class="hint">{{ t('keys.import_relock') }}</p>
+        {{ protection_fields(levels, 'strong', {'kdf': 'argon2id', 'kdf_strength': 'normal', 'salt': '16'}, options, {}, icons, with_key_type=false) }}
+        {{ rating_box(rating, rules) }}
+        <button class="btn" type="submit">{{ t('keys.import_button') }}</button>
+      </form>
+    </details>
+  </div>
+
+  <section class="card">
+    <h2>{{ t('keys.list_title') }}</h2>
+    {% if identities %}
+    <ul class="key-list">
+      {% for k in identities %}
+      <li class="key-item">
+        {{ key_head(k) }}
+        {% if not k.protected %}<p class="warn-line">{{ t('keys.unprotected_warning') }}</p>{% endif %}
+        <div class="key-actions">
+          <form method="post" action="{{ url_for('keys.export_public') }}">
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
+            <button class="btn btn-small" type="submit">{{ t('keys.export_public') }}</button>
+          </form>
+          <form method="post" action="{{ url_for('keys.export_private') }}" data-confirm="{{ t('keys.export_private_confirm') }}">
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
+            <button class="btn btn-small btn-warn" type="submit">{{ t('keys.export_private') }}</button>
+          </form>
+          <form method="post" action="{{ url_for('keys.delete') }}" data-confirm="{{ t('keys.delete_confirm', name=k.name) }}">
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
+            <button class="btn btn-small btn-ghost-danger" type="submit">{{ t('common.delete') }}</button>
+          </form>
+        </div>
+        <details class="subpanel" {% if panel == k.fingerprint %}open{% endif %}>
+          <summary>{{ t('keys.change_protection') }}</summary>
+          <form method="post" action="{{ url_for('keys.change_protection') }}" class="form" autocomplete="off" data-protection>
+            {{ csrf() }}<input type="hidden" name="fingerprint" value="{{ k.fingerprint }}">
+            {% if k.protected %}
+            <label>{{ t('keys.current_passphrase') }}
+              <input type="password" name="current_passphrase" required autocomplete="current-password">
+            </label>
+            {% endif %}
+            {{ protection_fields(levels, 'strong', {'kdf': 'argon2id', 'kdf_strength': 'normal', 'salt': '16', 'key_type': k.key_type}, options, {}, icons, with_key_type=false) }}
+            <input type="hidden" name="key_type" value="{{ k.key_type }}" data-rate="key_type">
+            {{ rating_box(rating, rules) }}
+            <button class="btn btn-small btn-primary" type="submit">{{ t('keys.change_protection_button') }}</button>
+          </form>
+        </details>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="hint">{{ t('keys.share_hint') }}</p>
+    {% else %}
+    <p class="empty">{{ t('keys.empty') }}</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

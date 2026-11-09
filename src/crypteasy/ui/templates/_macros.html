@@ -1,0 +1,112 @@
+{# Champ CSRF de Flask-WTF : dans CHAQUE formulaire POST. #}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_value() }}">{% endmacro %}
+
+{# Badge de niveau de sécurité (§ 4.2). #}
+{% macro level_badge(level) %}
+  {% if level %}<span class="level level-{{ level }}" title="{{ t('level.' ~ level ~ '.help') }}">{{ t('level.' ~ level) }}</span>{% endif %}
+{% endmacro %}
+
+{# Une clé (à moi ou d'un contact) : nom, type, niveau, empreinte. #}
+{% macro key_head(k) %}
+  <div class="key-head">
+    <strong>{{ k.name }}</strong>
+    <span class="tags"><span class="tag">{{ k.kind }}</span>{{ level_badge(k.level) }}</span>
+  </div>
+  <div class="fingerprint" title="{{ t('common.fingerprint') }}">{{ k.fingerprint }}</div>
+{% endmacro %}
+
+{# Indicateur de niveau (F6). Rendu par le serveur, puis recalculé en direct par app.js
+   à partir des mêmes règles (data-rules, issues de security_levels.py). #}
+{% macro rating_box(r, rules) %}
+  <div class="rating rating-{{ r.level }}" data-rating data-rules="{{ rules }}" aria-live="polite">
+    <div class="rating-head">
+      <span class="rating-icon" aria-hidden="true">{{ r.icon }}</span>
+      {{ t('rating.title') }} <strong class="rating-label">{{ t(r.label_key) }}</strong>
+    </div>
+    <ul class="rating-reasons">
+      {% for lvl, key in r.reasons %}<li class="lvl-{{ lvl }}">{{ t(key) }}</li>{% endfor %}
+    </ul>
+  </div>
+{% endmacro %}
+
+{# Robustesse d'une phrase secrète : calculée dans la fenêtre uniquement, jamais envoyée. #}
+{% macro pw_meter(field) %}
+  <div class="pw-meter" data-pw-meter="{{ field }}" aria-live="polite">
+    <div class="pw-bar"><span></span></div><small class="pw-text"></small>
+  </div>
+{% endmacro %}
+
+{# Bouton « Choisir… » qui ouvre une boîte de dialogue native et garde l'identifiant
+   de la sélection dans un champ caché. #}
+{% macro choose_button(what, field, label) %}
+  <div class="chooser" data-choose="{{ what }}" data-field="{{ field }}">
+    <input type="hidden" name="{{ field }}" value="">
+    <button type="button" class="btn">{{ label }}</button>
+    <span class="chooser-name" aria-live="polite"></span>
+  </div>
+{% endmacro %}
+
+{# Protection de la clé privée (§ 4.1) : niveau, phrase secrète, « sans phrase secrète »,
+   options avancées. Utilisé pour générer, importer et changer la protection. #}
+{% macro protection_fields(levels, level, choices, options, form, icons, with_key_type=true, uid='new') %}
+  <label>{{ t('protect.level') }}
+    <select name="level" data-level-select>
+      {% for lvl in levels %}
+      <option value="{{ lvl }}" {% if lvl == level %}selected{% endif %}>{% if lvl != 'custom' %}{{ icons[lvl] }} {% endif %}{{ t('level.' ~ lvl) }}{% if lvl == 'strong' %} {{ t('protect.default_suffix') }}{% endif %}</option>
+      {% endfor %}
+    </select>
+    <small data-level-help>{{ t('level.' ~ level ~ '.help') }}</small>
+  </label>
+
+  <div class="passphrase-block" data-passphrase-block>
+    <label>{{ t('protect.passphrase') }}
+      <input type="password" name="passphrase" minlength="12" autocomplete="new-password" data-rate-passphrase>
+      {{ pw_meter('passphrase') }}
+      <small>{{ t('protect.passphrase_help') }}</small>
+    </label>
+    <label>{{ t('protect.passphrase2') }}
+      <input type="password" name="passphrase2" minlength="12" autocomplete="new-password">
+    </label>
+  </div>
+
+  <label class="check">
+    <input type="checkbox" name="no_passphrase" value="1" data-no-passphrase {% if form.get('no_passphrase') == '1' %}checked{% endif %}>
+    {{ t('protect.no_passphrase') }}
+  </label>
+  <div class="danger-box" data-no-passphrase-warning hidden>
+    <p>{{ t('protect.no_passphrase_warning') }}</p>
+    <label class="check">
+      <input type="checkbox" name="no_passphrase_confirm" value="1">
+      {{ t('protect.no_passphrase_confirm') }}
+    </label>
+  </div>
+
+  <details class="advanced" {% if level == 'custom' %}open{% endif %}>
+    <summary>{{ t('common.advanced') }}</summary>
+    <div class="form">
+      {% if with_key_type %}
+      <label>{{ t('protect.key_type') }}
+        <select name="key_type" data-rate="key_type">
+          {% for v in options.key_type %}<option value="{{ v }}" {% if v == choices.key_type %}selected{% endif %}>{{ t('option.key_type.' ~ v) }}</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      <label>{{ t('protect.kdf') }}
+        <select name="kdf" data-rate="kdf" data-kdf-field>
+          {% for v in options.kdf %}<option value="{{ v }}" {% if v == choices.kdf %}selected{% endif %}>{{ t('option.kdf.' ~ v) }}</option>{% endfor %}
+        </select>
+        <small>{{ t('protect.kdf_help') }}</small>
+      </label>
+      <label>{{ t('protect.kdf_strength') }}
+        <select name="kdf_strength" data-rate="kdf_strength" data-kdf-field>
+          {% for v in options.kdf_strength %}<option value="{{ v }}" {% if v == choices.kdf_strength %}selected{% endif %}>{{ t('option.kdf_strength.' ~ v) }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>{{ t('protect.salt') }}
+        <select name="salt" data-rate="salt" data-kdf-field>
+          {% for v in options.salt %}<option value="{{ v }}" {% if v == choices.salt %}selected{% endif %} {% if v == '0' %}data-pbkdf2-only{% endif %}>{{ t('option.salt.' ~ v) }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+  </details>
+{% endmacro %}

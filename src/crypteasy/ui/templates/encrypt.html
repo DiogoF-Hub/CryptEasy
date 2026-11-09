@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import rating_box with context %}
+{% block title %}{{ t('encrypt.title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('encrypt.title') }}</h1>
+
+<section class="card narrow" data-encrypt-page>
+  {% if not contacts and not identities %}
+  <p class="empty">{{ t('encrypt.no_recipient') }}
+    <a href="{{ url_for('contacts.index') }}">{{ t('encrypt.add_contact') }}</a> ·
+    <a href="{{ url_for('keys.index') }}">{{ t('encrypt.create_key') }}</a></p>
+  {% else %}
+  <div class="form">
+    <div class="step"><span class="step-num">1</span> {{ t('encrypt.step_source') }}</div>
+    <div class="source-buttons">
+      <button type="button" class="btn" data-pick="file">{{ t('encrypt.pick_file') }}</button>
+      <button type="button" class="btn" data-pick="folder">{{ t('encrypt.pick_folder') }}</button>
+    </div>
+    <div class="selection" data-selection hidden>
+      <div class="selection-name" data-sel-name></div>
+      <div class="selection-meta" data-sel-meta></div>
+      <div class="selection-warn" data-sel-big hidden>{{ t('encrypt.big_file') }}</div>
+    </div>
+
+    <div class="step"><span class="step-num">2</span> {{ t('encrypt.step_recipient') }}</div>
+    <label>{{ t('encrypt.recipient') }}
+      <select name="recipient" required data-rate="key_type">
+        <option value="">{{ t('common.choose') }}</option>
+        {% if contacts %}
+        <optgroup label="{{ t('encrypt.group_contacts') }}">
+          {% for c in contacts %}
+          <option value="{{ c.fingerprint }}" data-rate-value="{{ c.key_type }}" {% if c.fingerprint == selected %}selected{% endif %}>{{ c.name }} ({{ c.kind }})</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+        {% if identities %}
+        <optgroup label="{{ t('encrypt.group_mine') }}">
+          {% for k in identities %}
+          <option value="{{ k.fingerprint }}" data-rate-value="{{ k.key_type }}" {% if k.fingerprint == selected %}selected{% endif %}>{{ k.name }} ({{ k.kind }})</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+      </select>
+    </label>
+
+    <div class="step"><span class="step-num">3</span> {{ t('encrypt.step_security') }}</div>
+    <details class="advanced">
+      <summary>{{ t('encrypt.advanced') }}</summary>
+      <label>{{ t('encrypt.cipher') }}
+        <select name="cipher" data-rate="cipher">
+          {% for v in ciphers %}<option value="{{ v }}" {% if v == default_cipher %}selected{% endif %}>{{ t('option.cipher.' ~ v) }}</option>{% endfor %}
+        </select>
+        <small>{{ t('encrypt.cipher_help') }}</small>
+      </label>
+    </details>
+    {{ rating_box(rating, rules) }}
+
+    <button class="btn btn-primary btn-wide" type="button" data-run disabled>{{ t('encrypt.button') }}</button>
+    <p class="hint">{{ t('encrypt.save_hint') }}</p>
+
+    <div class="progress-block" data-progress hidden>
+      <div class="progress"><span data-progress-bar></span></div>
+      <div class="progress-text" data-progress-text aria-live="polite"></div>
+    </div>
+    <div class="result" data-result hidden>
+      <div class="alert alert-success" data-result-text role="status"></div>
+      <button type="button" class="btn" data-reveal>{{ t('common.open_folder') }}</button>
+    </div>
+    <div class="alert alert-error" data-error role="alert" hidden></div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
