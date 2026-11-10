@@ -329,3 +329,4 @@ cython_debug/
 Resources/
 claude.txt
 CLAUDE.md
+.vscode/
