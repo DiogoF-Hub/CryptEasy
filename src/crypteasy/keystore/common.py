@@ -13,6 +13,17 @@ from .errors import InvalidNameError
 
 MAX_NAME_LEN = 64  # same limit as the UI forms (maxlength="64")
 
+# Upper bounds on the KDF settings of a key file, checked BEFORE any KDF runs, so a crafted
+# file can't freeze the app (spec section 6.2). Section 6.2 sets the 1 GiB memory one; the
+# others leave headroom over the "max" preset (section 4.1) so tuned presets still load.
+ARGON2_MAX_MEMORY_KIB = 1024 * 1024  # 1 GiB
+ARGON2_MAX_ITERATIONS = 10  # verify this against the final core/kdf.py presets (#7)
+ARGON2_MAX_PARALLELISM = 16  # verify this
+PBKDF2_MAX_ITERATIONS = 10_000_000  # verify this: about 4 to 5 s on our laptops
+# scrypt only appears in keys imported from OpenSSL (`-scrypt` writes N=16384, r=8: 16 MiB).
+SCRYPT_MAX_MEMORY = 256 * 1024 * 1024  # verify this: ~2 s at N=2**18, r=8 on our laptops
+SCRYPT_MAX_BLOCK_SIZE = 32  # r; OpenSSL writes 8
+
 
 def clean_name(name: str) -> str:
     """Strip spaces and reject empty, too long, or control / bidi-override characters."""

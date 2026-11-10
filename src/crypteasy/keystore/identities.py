@@ -35,7 +35,17 @@ from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from . import _core, paths
-from .common import atomic_write, clean_name, parse_json, read_limited, write_new
+from .common import (
+    ARGON2_MAX_ITERATIONS,
+    ARGON2_MAX_MEMORY_KIB,
+    ARGON2_MAX_PARALLELISM,
+    PBKDF2_MAX_ITERATIONS,
+    atomic_write,
+    clean_name,
+    parse_json,
+    read_limited,
+    write_new,
+)
 from .errors import (
     AlreadyExistsError,
     CorruptedStoreError,
@@ -55,12 +65,6 @@ SALT_LENS = (0, 16, 32)  # 0 = no salt, PBKDF2 only
 LEVELS = ("very_strong", "strong", "medium", "weak", "none", "custom")
 NONCE_LEN = 12
 
-# Upper bounds checked when a private.key is read. Section 6.2 sets the Argon2 memory one;
-# the others leave headroom over the "max" preset (section 4.1) so tuned presets still load.
-ARGON2_MAX_MEMORY_KIB = 1024 * 1024  # 1 GiB
-ARGON2_MAX_ITERATIONS = 10  # verify this against the final core/kdf.py presets (#7)
-ARGON2_MAX_PARALLELISM = 16  # verify this
-PBKDF2_MAX_ITERATIONS = 10_000_000  # verify this
 
 MAX_PRIVATE_KEY_BYTES = 64 * 1024  # RSA-4096 + Ed25519 PKCS#8, base64 + JSON: ~4 KiB
 MAX_PUBLIC_PEM_BYTES = 16 * 1024
@@ -339,24 +343,62 @@ def create_identity(name: str, key_type: str, protection: Protection) -> Identit
         _sweep_leftovers()
         _check_name_free(name)
         secret, public_pem, fingerprint = _core.generate(key_type)
-        private_key = seal_secret(secret, protection)
-        created = datetime.now(UTC).isoformat(timespec="seconds")
-        ident = Identity(
-            name, key_type, fingerprint, protection.level, protection.passphrase is not None,
-            created,
-        )  # fmt: skip
-        keys = paths.keys_dir()
-        key_id = secrets.token_hex(8)
-        tmp = keys / f".tmp-{key_id}"
-        tmp.mkdir(mode=0o700)
-        try:
-            write_new(tmp / "private.key", private_key)
-            write_new(tmp / "public.pem", public_pem)
-            write_new(tmp / "info.json", _info_json(ident))
-            os.rename(tmp, keys / key_id)
-        except BaseException:
-            shutil.rmtree(tmp, ignore_errors=True)
-            raise
+        return _save_new(name, key_type, fingerprint, public_pem, secret, protection)
+
+
+def import_private_key(
+    name: str, key_file: Path, current_passphrase: bytes | None, protection: Protection
+) -> Identity:
+    """Import a private key and re-lock it with `protection` (spec F2).
+
+    `key_file` is a private.key exported by CryptEasy, or a PEM private key made elsewhere
+    (e.g. OpenSSL), encrypted or not; `current_passphrase` unlocks it. A PEM without an
+    Ed25519 signing key gets a new one. Raises InvalidPrivateKeyError, WrongPassphraseError,
+    InvalidNameError, InvalidSettingError, AlreadyExistsError (name taken, or this key is
+    already one of mine).
+    """
+    name = clean_name(name)
+    _check_level(protection)
+    try:
+        data = read_limited(key_file, MAX_PRIVATE_KEY_BYTES)
+    except ValueError as exc:  # too large to be a key
+        raise InvalidPrivateKeyError() from exc
+    if data.lstrip().startswith(b"{"):  # CryptEasy private.key (JSON); a PEM starts with "-----"
+        pem, password = open_secret(data, current_passphrase), None
+    else:
+        pem, password = data, current_passphrase
+    secret, public_pem, key_type, fingerprint = _core.load_private_pem(pem, password)
+    with _store_lock:
+        _sweep_leftovers()
+        _check_name_free(name)
+        if any(ident.fingerprint == fingerprint for _f, ident in _scan()[0]):
+            raise AlreadyExistsError()
+        return _save_new(name, key_type, fingerprint, public_pem, secret, protection)
+
+
+def _save_new(
+    name: str, key_type: str, fingerprint: str, public_pem: bytes, secret: bytes,
+    protection: Protection,
+) -> Identity:  # fmt: skip
+    """Lock `secret` and write a new key folder. Called under _store_lock."""
+    private_key = seal_secret(secret, protection)
+    created = datetime.now(UTC).isoformat(timespec="seconds")
+    ident = Identity(
+        name, key_type, fingerprint, protection.level, protection.passphrase is not None,
+        created,
+    )  # fmt: skip
+    keys = paths.keys_dir()
+    key_id = secrets.token_hex(8)
+    tmp = keys / f".tmp-{key_id}"
+    tmp.mkdir(mode=0o700)
+    try:
+        write_new(tmp / "private.key", private_key)
+        write_new(tmp / "public.pem", public_pem)
+        write_new(tmp / "info.json", _info_json(ident))
+        os.rename(tmp, keys / key_id)
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
     return ident
 
 

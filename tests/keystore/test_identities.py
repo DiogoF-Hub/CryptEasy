@@ -16,7 +16,7 @@ from crypteasy.keystore.errors import (
 )
 from crypteasy.keystore.identities import Protection
 
-from .conftest import OTHER_PW, PW, fake_pem, needs_core
+from .conftest import OTHER_PW, PW, fake_pem
 
 pytestmark = pytest.mark.usefixtures("fake_core")
 
@@ -425,20 +425,3 @@ def test_deeply_nested_private_key_rejected():
 )
 def test_spec_presets_within_bounds(kdf, salt_len, params):
     ids._check_params(kdf, salt_len, params)
-
-
-# ----------------------------------------------------------------- with the real core/
-
-
-@needs_core
-def test_real_create_unlock_every_level_and_key_type():
-    """Real KDF + real keys: every level x every key type round-trips, wrong passphrase
-    fails, and the fingerprint matches the one core/ computes from public.pem."""
-    raise NotImplementedError
-
-
-@needs_core
-def test_real_import_pem_and_private_key():
-    """import_private_key (pending #6): OpenSSL PEM (encrypted and not) and a CryptEasy
-    private.key are imported and re-locked; a public key or garbage is rejected."""
-    raise NotImplementedError

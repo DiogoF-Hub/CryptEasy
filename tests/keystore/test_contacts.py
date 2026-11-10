@@ -11,7 +11,7 @@ from crypteasy.keystore.errors import (
     NotFoundError,
 )
 
-from .conftest import fake_fingerprint, fake_pem, needs_core
+from .conftest import fake_fingerprint, fake_pem
 
 pytestmark = pytest.mark.usefixtures("fake_core")
 
@@ -137,10 +137,3 @@ def test_damaged_file_is_not_overwritten_by_add():
     with pytest.raises(CorruptedStoreError):
         contacts.add_contact("Bob", fake_pem())
     assert paths.contacts_file().read_bytes() == b"{oops"
-
-
-@needs_core
-def test_real_public_key_accepted_and_garbage_rejected():
-    """With the real core/: a public.pem exported by CryptEasy is accepted, an OpenSSL
-    private key or a truncated PEM is rejected."""
-    raise NotImplementedError

@@ -1,8 +1,9 @@
 """Shared fixtures for the keystore tests (Track C).
 
 Every test runs against a temp data folder (`CRYPTEASY_HOME`), never the real one.
-Until core/ exists (#6, #7), `fake_core` replaces keystore/_core.py with deterministic
-stand-ins. They are NOT cryptography: they only let the storage logic be tested.
+`fake_core` replaces all of keystore/_core.py with fast deterministic stand-ins, to test
+the storage logic. `fake_kdf` replaces only the KDF (core/kdf.py, #7, not written yet),
+so tests using it run the real core/keys.py. The fakes are NOT cryptography.
 """
 
 import hashlib
@@ -75,11 +76,15 @@ def _derive_lock_key(kdf: str, passphrase: bytes, salt: bytes, params: dict) -> 
 
 
 @pytest.fixture
-def fake_core(monkeypatch):
-    monkeypatch.setattr(_core, "inspect_public_pem", _inspect_public_pem)
-    monkeypatch.setattr(_core, "generate", _generate)
+def fake_kdf(monkeypatch):
     monkeypatch.setattr(_core, "kdf_params", _kdf_params)
     monkeypatch.setattr(_core, "derive_lock_key", _derive_lock_key)
 
 
-needs_core = pytest.mark.skip(reason="needs core/keys.py (#6) and core/kdf.py (#7)")
+@pytest.fixture
+def fake_core(monkeypatch, fake_kdf):
+    monkeypatch.setattr(_core, "inspect_public_pem", _inspect_public_pem)
+    monkeypatch.setattr(_core, "generate", _generate)
+
+
+needs_kdf = pytest.mark.skip(reason="needs core/kdf.py (#7)")
