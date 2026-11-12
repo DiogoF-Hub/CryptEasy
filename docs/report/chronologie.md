@@ -65,8 +65,8 @@ Ce sont des faits relevés dans les sources. Les sections 2 à 4 du rapport devr
 ## 3. À compléter
 
 - [ ] **Board GitHub** : relever le temps estimé et le temps réel de chaque tâche terminée, à la fin de chaque sprint (fait pour les 6 tâches terminées au 10/11, voir le constat 7)
-- [ ] **Confirmer avec Diogo** que la spec a bien été rédigée du 15 au 18/10, hors du dépôt
-- [ ] **Confirmer avec Yanis** que l'interface a bien été écrite le 15/10, en local
+- [x] **Confirmé par Diogo** (12/11) : la spec a bien été rédigée du 15 au 18/10, hors du dépôt
+- [x] **Confirmé par Yanis** (12/11) : l'interface a bien été écrite le 15/10, en local
 - [ ] Ajouter chaque réunion de sprint (14/11, 22/11, 28/11) et ses décisions
 - [ ] Mettre à jour la partie 4 juste avant l'assemblage du rapport (#34)
 
