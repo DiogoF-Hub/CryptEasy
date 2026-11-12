@@ -1,7 +1,5 @@
-"""keystore/ on top of the real core/keys.py (#6). Only the KDF is faked until #7.
-
-Keys saved without a passphrase don't use the KDF at all, so those tests are fully real.
-"""
+"""keystore/ on top of the real core/keys.py (#6). The KDF is faked here to keep these
+fast; test_real_kdf.py runs the real core/kdf.py."""
 
 import json
 
@@ -20,7 +18,7 @@ from crypteasy.keystore.errors import (
 )
 from crypteasy.keystore.identities import Protection
 
-from .conftest import OTHER_PW, PW, needs_kdf
+from .conftest import OTHER_PW, PW
 
 pytestmark = pytest.mark.usefixtures("fake_kdf")
 
@@ -70,13 +68,6 @@ def test_secret_never_written_in_clear_when_protected():
         if f.is_file():
             assert b"PRIVATE KEY" not in f.read_bytes()
     assert b"PRIVATE KEY" in secret
-
-
-@needs_kdf
-def test_real_kdf_every_level():
-    """With core/kdf.py: every level of section 4.2 round-trips with the real KDF presets,
-    and the presets pass identities._check_params."""
-    raise NotImplementedError
 
 
 # ----------------------------------------------------------------- contacts

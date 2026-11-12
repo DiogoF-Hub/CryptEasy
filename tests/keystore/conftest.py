@@ -2,8 +2,9 @@
 
 Every test runs against a temp data folder (`CRYPTEASY_HOME`), never the real one.
 `fake_core` replaces all of keystore/_core.py with fast deterministic stand-ins, to test
-the storage logic. `fake_kdf` replaces only the KDF (core/kdf.py, #7, not written yet),
-so tests using it run the real core/keys.py. The fakes are NOT cryptography.
+the storage logic. `fake_kdf` replaces only the KDF (the real presets take ~1 s each), so
+tests using it run the real core/keys.py; test_real_kdf.py uses no fakes at all.
+The fakes are NOT cryptography.
 """
 
 import hashlib
@@ -85,6 +86,3 @@ def fake_kdf(monkeypatch):
 def fake_core(monkeypatch, fake_kdf):
     monkeypatch.setattr(_core, "inspect_public_pem", _inspect_public_pem)
     monkeypatch.setattr(_core, "generate", _generate)
-
-
-needs_kdf = pytest.mark.skip(reason="needs core/kdf.py (#7)")

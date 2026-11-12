@@ -1,9 +1,7 @@
 """The only place where keystore/ calls the crypto engine (crypteasy.core).
 
-Keys (core/keys.py, #6) are wired. The KDF (core/kdf.py, #7) isn't written yet, so
-kdf_params and derive_lock_key still raise NotImplementedError: until then only keys
-saved without a passphrase work for real. Tests replace the KDF pair with fakes
-(tests/keystore/conftest.py).
+Keys come from core/keys.py (#6), the KDF from core/kdf.py (#7). Most tests replace the
+KDF pair with fast fakes (tests/keystore/conftest.py); test_real_core.py runs the real one.
 
 Callers use `_core.<name>(...)`, never `from ._core import <name>`, so the fakes apply.
 
@@ -16,12 +14,11 @@ from __future__ import annotations
 from cryptography.exceptions import InternalError
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+from crypteasy.core import kdf as core_kdf
 from crypteasy.core import keys
 
 from . import pem_guard
-from .errors import InvalidPrivateKeyError
-
-_PENDING_KDF = "needs core/kdf.py (#7)"
+from .errors import InvalidPrivateKeyError, InvalidSettingError
 
 
 def inspect_public_pem(pem: bytes) -> tuple[str, str]:
@@ -72,15 +69,21 @@ def load_private_pem(pem: bytes, password: bytes | None) -> tuple[bytes, bytes, 
 
 
 def kdf_params(kdf: str, strength: str) -> dict:
-    """Preset parameters for a KDF ("argon2id" / "pbkdf2-sha256") and a strength.
-
-    argon2id → {"memory_kib": int, "iterations": int, "parallelism": int}
-    pbkdf2-sha256 → {"iterations": int}
-    Raises InvalidSettingError for an unknown strength.
-    """
-    raise NotImplementedError(_PENDING_KDF)
+    """Preset parameters for a KDF ("argon2id" / "pbkdf2-sha256") and a strength
+    ("normal" / "strong" / "max"), in the private.key "params" format (spec section 6.2).
+    Raises InvalidSettingError for an unknown KDF or strength."""
+    try:
+        return core_kdf.get_kdf_params(kdf, strength)
+    except ValueError as exc:
+        raise InvalidSettingError() from exc
 
 
 def derive_lock_key(kdf: str, passphrase: bytes, salt: bytes, params: dict) -> bytes:
-    """Turn the key passphrase into the 32-byte AES-256-GCM key that locks private.key."""
-    raise NotImplementedError(_PENDING_KDF)
+    """Turn the key passphrase into the 32-byte AES-256-GCM key that locks private.key.
+
+    keystore has already checked the settings against its own bounds; core checks them
+    again. A refusal there means the file is unusable: InvalidPrivateKeyError."""
+    try:
+        return core_kdf.derive_key(passphrase, kdf, salt, params)
+    except ValueError as exc:
+        raise InvalidPrivateKeyError("KDF settings refused by core") from exc

@@ -16,10 +16,13 @@ MAX_NAME_LEN = 64  # same limit as the UI forms (maxlength="64")
 # Upper bounds on the KDF settings of a key file, checked BEFORE any KDF runs, so a crafted
 # file can't freeze the app (spec section 6.2). Section 6.2 sets the 1 GiB memory one; the
 # others leave headroom over the "max" preset (section 4.1) so tuned presets still load.
+# core/kdf.py (#7) "max" presets: Argon2id 1 GiB / 6 passes / 4 lanes, PBKDF2 7 500 000.
+# core/kdf.py has looser bounds of its own (20 passes, 20 000 000); these are stricter and
+# checked first, so a key file can't ask for more than ~2x the slowest preset.
 ARGON2_MAX_MEMORY_KIB = 1024 * 1024  # 1 GiB
-ARGON2_MAX_ITERATIONS = 10  # verify this against the final core/kdf.py presets (#7)
-ARGON2_MAX_PARALLELISM = 16  # verify this
-PBKDF2_MAX_ITERATIONS = 10_000_000  # verify this: about 4 to 5 s on our laptops
+ARGON2_MAX_ITERATIONS = 10
+ARGON2_MAX_PARALLELISM = 16
+PBKDF2_MAX_ITERATIONS = 10_000_000  # about 4 to 5 s on our laptops (measured Nov 10)
 # scrypt only appears in keys imported from OpenSSL (`-scrypt` writes N=16384, r=8: 16 MiB).
 SCRYPT_MAX_MEMORY = 256 * 1024 * 1024  # verify this: ~2 s at N=2**18, r=8 on our laptops
 SCRYPT_MAX_BLOCK_SIZE = 32  # r; OpenSSL writes 8
