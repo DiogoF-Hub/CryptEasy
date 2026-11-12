@@ -27,7 +27,7 @@ DEFAULT_LEVEL = STRONG
 KEY_TYPES = ["x25519", "rsa-4096", "rsa-3072", "rsa-2048"]
 CIPHERS = ["aes-256-gcm", "aes-128-gcm"]
 KDFS = ["argon2id", "pbkdf2-sha256"]
-KDF_STRENGTHS = ["normal", "fort", "max"]
+KDF_STRENGTHS = ["normal", "strong", "max"]
 SALTS = ["32", "16", "0"]  # octets ; "0" = aucun sel (PBKDF2 uniquement)
 DEFAULT_CIPHER = "aes-256-gcm"
 
@@ -53,7 +53,7 @@ RATINGS: dict[str, dict[str, str]] = {
                  "rsa-2048": MEDIUM},
     "cipher": {"aes-256-gcm": VERY_STRONG, "aes-128-gcm": MEDIUM},
     "kdf": {"argon2id": VERY_STRONG, "pbkdf2-sha256": MEDIUM},
-    "kdf_strength": {"max": VERY_STRONG, "fort": STRONG, "normal": STRONG},
+    "kdf_strength": {"max": VERY_STRONG, "strong": STRONG, "normal": STRONG},
     "salt": {"32": VERY_STRONG, "16": STRONG, "0": WEAK},
 }  # fmt: skip
 
