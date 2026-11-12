@@ -208,13 +208,13 @@ There's only **one secret the user types** in the whole app: the key passphrase 
 |---|---|---|
 | File cipher | AES-256-GCM, AES-128-GCM | size of the random file key. GCM only: it detects tampering. no CBC |
 
-KDF strength presets. These are first guesses: during development we time them on our own laptops and adjust the numbers to hit the unlock times.
+KDF strength presets, timed on Nov 10 on a recent laptop (Intel Core Ultra X7) and set to about half the target there, to land near the target on an average laptop. Argon2id never uses more than 1 GiB, so a laptop with little RAM doesn't crash.
 
-| Preset | Argon2id | PBKDF2-SHA256 | Unlock time target |
-|---|---|---|---|
-| normal | 64 MiB memory, 3 passes | 600 000 iterations | ~0.5 s |
-| strong | 256 MiB memory, 3 passes | 1 200 000 iterations | ~1 s |
-| max | 1 GiB memory, 4 passes | 3 000 000 iterations | ~3 s |
+| Preset | Argon2id (4 lanes) | PBKDF2-SHA256 | Measured | Unlock time target (average laptop) |
+|---|---|---|---|---|
+| normal | 256 MiB memory, 4 passes | 1 200 000 iterations | ~0.25 s | ~0.5 s |
+| strong | 512 MiB memory, 4 passes | 2 500 000 iterations | ~0.5 s | ~1 s |
+| max | 1 GiB memory, 6 passes | 7 500 000 iterations | ~1.3 to 1.5 s | ~3 s |
 
 ### 4.2 Security levels
 
