@@ -5,6 +5,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 from crypteasy.core.errors import DecryptionError, ExtractionTooLargeError, UnsafeArchiveError
+from crypteasy.core.package import windows_reserved_names
 
 """
 In this file I have everything about folders (TECHNICAL_SPEC.md, section 5.4):
@@ -32,8 +33,20 @@ copy_chunk = 1024 * 1024
 # This func zips a folder into dst_zip, keeping the paths relative to the folder
 # e.g. holidays/beach/sun.jpg is stored as "beach/sun.jpg"
 # The zip is written straight to the disk file by file, so a big folder never sits in RAM
+# If zipping fails (e.g. a file can't be read), the half-written zip is deleted: it would
+# hold some of the user's files NOT encrypted, somewhere the user doesn't know about
 def zip_folder(folder, dst_zip):
-    folder = Path(folder)
+    try:
+        write_zip(Path(folder), dst_zip)
+    # BaseException catches everything, even Ctrl+C: the zip is deleted, then
+    # "raise" alone sends the same error on, unchanged
+    except BaseException:
+        Path(dst_zip).unlink(missing_ok=True)
+        raise
+
+
+# This func does the real work of zip_folder, which only adds the cleanup on error
+def write_zip(folder, dst_zip):
 
     # ZIP_STORED = no compression. The zip is encrypted right after, and encrypted data
     # can't be compressed anyway. It also keeps the zip bomb guard simple: a real folder
@@ -169,6 +182,15 @@ def safe_target(folder, info):
             raise UnsafeArchiveError(f"unsafe path in the zip: {info.filename!r}")
     if not parts:
         return None
+
+    # Windows keeps some names for devices (CON, NUL, COM1, ...), even with an extension:
+    # "nul.txt" would send the data into the NUL device and it would disappear, with no error
+    # On Linux and macOS these are normal names, so they are renamed, not refused:
+    # "nul.txt" gives "_nul.txt", "aux/notes.txt" gives "_aux/notes.txt"
+    # The list is the one of core/package.py, so it's written in one place only
+    for i, part in enumerate(parts):
+        if part.split(".")[0].upper() in windows_reserved_names:
+            parts[i] = "_" + part
 
     # Last check, on the real final path: resolve() follows "..", symlinks already on
     # the disk, etc. The result must still be inside the folder

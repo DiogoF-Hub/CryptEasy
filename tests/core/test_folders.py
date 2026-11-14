@@ -140,6 +140,32 @@ def test_symlinks_are_skipped(tmp_path):
     assert not any("link_to" in name or "passwords" in name for name in names)
 
 
+# If zipping fails halfway (e.g. a file can't be read), the half-written zip is deleted:
+# it would hold some of the files not encrypted. To make the 3rd file fail on every OS,
+# ZipFile.write is replaced by a version that raises an error on the 3rd call
+def test_zip_is_deleted_if_zipping_fails(tmp_path, monkeypatch):
+    src = tmp_path / "holidays"
+    src.mkdir()
+    for i in range(3):
+        (src / f"photo{i}.jpg").write_bytes(os.urandom(1000))
+    real_write = zipfile.ZipFile.write
+    calls = []
+
+    def failing_write(self, filename, arcname=None, *args, **kwargs):
+        calls.append(arcname)
+        if len(calls) == 3:
+            raise PermissionError("can't read this photo")
+        return real_write(self, filename, arcname, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile.ZipFile, "write", failing_write)
+    zip_path = tmp_path / "holidays.zip"
+
+    with pytest.raises(PermissionError):
+        folders.zip_folder(src, zip_path)
+    assert len(calls) == 3
+    assert not zip_path.exists()
+
+
 # ----------------------------------------------------------------- zip-slip
 
 # Each of these names tries to write outside the new folder
@@ -210,6 +236,41 @@ def test_duplicate_paths_are_refused(tmp_path, entries):
     with pytest.raises(UnsafeArchiveError):
         folders.extract_folder(zip_path, out)
     assert list(out.iterdir()) == []
+
+
+# Windows device names (CON, NUL, COM1, ...) get a "_" in front, files AND folders,
+# with or without an extension and whatever the case. Other names are left alone
+def test_windows_device_names_are_renamed(tmp_path):
+    zip_path = crafted_zip(
+        tmp_path,
+        {
+            "nul.txt": b"1",
+            "aux/notes.txt": b"2",
+            "Com1.log": b"3",
+            "LPT9": b"4",
+            "con.tar.gz": b"5",
+            "console.txt": b"6",
+            "null.txt": b"7",
+            "notes/prn": b"8",
+        },
+    )
+    out = tmp_path / "out"
+    out.mkdir()
+
+    result = folders.extract_folder(zip_path, out)
+
+    assert tree(result) == {
+        "_nul.txt": b"1",
+        "_aux": "folder",
+        "_aux/notes.txt": b"2",
+        "_Com1.log": b"3",
+        "_LPT9": b"4",
+        "_con.tar.gz": b"5",
+        "console.txt": b"6",
+        "null.txt": b"7",
+        "notes": "folder",
+        "notes/_prn": b"8",
+    }
 
 
 # ----------------------------------------------------------------- zip bomb
