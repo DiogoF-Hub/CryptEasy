@@ -22,11 +22,11 @@ Reached / partly / not reached: **partly**. Keys and KDF work; #8 (hybrid encryp
 | #6 core: key generation | Diogo | 4 | 3 | |
 | #7 core: KDF and security levels | Diogo | 3 | 2 | |
 | #9 core: zip a folder, safe extraction | Yani | 3 | 3 | taken over from Diogo on Nov 10, PR #51 waiting for review |
-| #14 Interface PR into `main` | Yanis | 0.5 | 1 | |
+| #14 Interface PR into `main` | Yanis | 0.5 | 2 | |
 | #15 Report: Word skeleton | Yani | 2 | 2 | |
-| #16 Report: gather the facts | Yani | 2 | 1 |
-| #17 Sprint 1 review (this meeting) | team | 0.5 | 0.5 | | |
-| **Total** | | **18.5** | **18** | 3 % under the estimate overall |
+| #16 Report: gather the facts | Yani | 2 | 1 | |
+| #17 Sprint 1 review (this meeting) | team | 0.5 | 0.5 | |
+| **Total** | | **18.5** | **19** | 3 % over the estimate overall |
 
 ## 3. Not done (moved to sprint 2)
 
@@ -40,7 +40,7 @@ Reached / partly / not reached: **partly**. Keys and KDF work; #8 (hybrid encryp
 
 - **What went well:** once the work started, it ran smoothly. The organisation is good (sprints, board, PRs): we keep it as it is.
 - **What went badly:** the workload was not split evenly between the weeks. Sprint 1 (school week) had more tasks than sprint 2 (company week), so Diogo was overloaded: #9 went to Yani and #10 moved to sprint 2. PRs waiting for review were not seen as a problem: reviews matter for the big steps.
-- **What we change for sprint 2:** keep the same organisation; Diogo adds a board view by status to move tasks more easily.
+- **What we change for sprint 2:** keep the same organisation; the team uses the existing Board view (by status) to move tasks.
 
 ## 5. Decisions
 
@@ -48,7 +48,7 @@ Also add them to [decisions.md](../decisions.md).
 
 - #10 moves to sprint 2 (Diogo)
 - #8 (Diogo) and #11 to #13 (Sam) are finished this weekend
-- Diogo adds a board view by status (Todo / In Progress / Done)
+- the team uses the existing [Board view](https://github.com/users/DiogoF-Hub/projects/1/views/2) (Todo / In Progress / Done) to move tasks
 - next meeting: **Sun Nov 22, 2 pm** (sprint 2 review + code freeze, #27)
 
 ## 6. Risks
