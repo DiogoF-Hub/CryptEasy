@@ -58,3 +58,9 @@ class DecryptionError(CryptEasyError):
 # A decrypted folder is abnormally large once extracted (zip bomb guard)
 class ExtractionTooLargeError(CryptEasyError):
     pass
+
+
+# A decrypted folder contains a dangerous path (../, absolute path, symlink, ...),
+# so it could write files outside the new folder (zip-slip guard)
+class UnsafeArchiveError(CryptEasyError):
+    pass
