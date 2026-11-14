@@ -2,7 +2,7 @@
 
 The risks identified in the CDC (Sep 15), plus new ones the team spots during the project. Reviewed at every weekly meeting: did it happen, and what did we do?
 
-**Last updated:** Nov 8 (re-plan)
+**Last updated:** Nov 14 (sprint 1 review)
 
 ---
 
@@ -22,4 +22,4 @@ Risks the team spots during the project (something that *could* go wrong, not so
 
 | # | Risk | Impact | Mitigation | Spotted on | Happened? | What we actually did |
 |---|---|---|---|---|---|---|
-| | | | | | | |
+| R6 | #8 (hybrid encryption) finished late | sprint 2 is blocked: plugging the real core into the interface (#21) and the exe (#18) both need it | Diogo finishes #8 this weekend (Nov 14 to 15); the team sees no other risk as long as everyone does their tasks | Nov 14 | | |
