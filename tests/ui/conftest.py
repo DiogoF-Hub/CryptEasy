@@ -3,13 +3,22 @@
 Les tests n'ouvrent jamais de fenêtre (la CI n'a pas d'écran, SPEC § 10) : les boîtes
 de dialogue natives sont remplacées par FakeDialogs, qui renvoie les chemins préparés
 par le test.
+
+Chaque test qui utilise la fixture `backend` tourne DEUX fois (#21) :
+- "demo" : FakeBackend, rien n'est chiffré ;
+- "real" : RealBackend, le vrai core/ + keystore/, dans un dossier de données
+  temporaire (CRYPTEASY_HOME). Seul le KDF est remplacé par un calcul rapide (les vrais
+  réglages prennent environ 1 s chacun) ; test_real_backend.py teste le vrai KDF.
 """
 
+import hashlib
+import json
 import re
 from pathlib import Path
 
 import pytest
 
+from crypteasy.keystore import _core as keystore_core
 from crypteasy.ui import create_app
 from crypteasy.ui.fake_backend import FakeBackend
 
@@ -44,9 +53,41 @@ class FakeDialogs:
         self.revealed.append(folder)
 
 
+def _fast_kdf_params(kdf: str, strength: str) -> dict:
+    """Réglages acceptés par keystore/ (mêmes bornes que les vrais), PAS de la sécurité."""
+    if kdf == "argon2id":
+        return {"memory_kib": 65536, "iterations": 3, "parallelism": 4}
+    return {"iterations": 600_000}
+
+
+def _fast_lock_key(kdf: str, passphrase: bytes, salt: bytes, params: dict) -> bytes:
+    material = kdf.encode() + salt + json.dumps(params, sort_keys=True).encode() + passphrase
+    return hashlib.sha256(material).digest()
+
+
 @pytest.fixture
-def backend():
-    return FakeBackend(speed=50e6)
+def fast_kdf(monkeypatch):
+    monkeypatch.setattr(keystore_core, "kdf_params", _fast_kdf_params)
+    monkeypatch.setattr(keystore_core, "derive_lock_key", _fast_lock_key)
+
+
+@pytest.fixture
+def data_home(tmp_path, monkeypatch):
+    """Dossier de données de keystore/ propre au test, jamais celui de l'utilisateur."""
+    home = tmp_path / "home"
+    monkeypatch.setenv("CRYPTEASY_HOME", str(home))
+    return home
+
+
+@pytest.fixture(params=["demo", "real"])
+def backend(request):
+    if request.param == "demo":
+        return FakeBackend(speed=50e6)
+    request.getfixturevalue("data_home")
+    request.getfixturevalue("fast_kdf")
+    from crypteasy.ui.real_backend import RealBackend
+
+    return RealBackend()
 
 
 @pytest.fixture

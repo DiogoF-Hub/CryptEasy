@@ -259,6 +259,8 @@
   "error.not_found": "Élément introuvable.",
   "error.already_exists": "Cet élément existe déjà.",
   "error.passphrase_too_short": "La phrase secrète doit faire au moins {n} caractères.",
+  "error.bad_name": "Nom invalide : 64 caractères au maximum, sans caractère invisible ni retour à la ligne.",
+  "error.store_damaged": "Vos clés ou vos contacts enregistrés sont illisibles (fichier abîmé ou modifié à la main). Rien n'a été changé.",
   "error.passphrase_common": "Cette phrase secrète est trop courante.",
   "error.bad_input": "Formulaire incomplet.",
   "error.unexpected": "Erreur inattendue. Réessayez ; si le problème persiste, signalez-le.",

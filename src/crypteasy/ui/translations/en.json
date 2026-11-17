@@ -259,6 +259,8 @@
   "error.not_found": "Item not found.",
   "error.already_exists": "This item already exists.",
   "error.passphrase_too_short": "The passphrase must be at least {n} characters long.",
+  "error.bad_name": "Invalid name: 64 characters at most, with no invisible characters or line breaks.",
+  "error.store_damaged": "Your saved keys or contacts can't be read (the file is damaged or was edited by hand). Nothing was changed.",
   "error.passphrase_common": "This passphrase is too common.",
   "error.bad_input": "Incomplete form.",
   "error.unexpected": "Unexpected error. Try again; if the problem persists, report it.",
