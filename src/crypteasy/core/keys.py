@@ -1,9 +1,10 @@
 import re
 
-from cryptography.exceptions import UnsupportedAlgorithm
+from cryptography.exceptions import InternalError, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519, rsa, x25519
 
+from crypteasy.core import pem_guard
 from crypteasy.core.errors import InvalidKeyError, InvalidPrivateKeyError, WrongPassphraseError
 
 """
@@ -52,6 +53,13 @@ private_labels = [b"PRIVATE KEY", b"ENCRYPTED PRIVATE KEY", b"RSA PRIVATE KEY"]
 # rb"..." means raw bytes: b = bytes (like the labels), r = raw so the \ stay as they are
 # re.compile prepares the regex once here, so it's not rebuilt each time a func uses it
 pem_block = re.compile(rb"-----BEGIN ([A-Z ]+)-----.+?-----END ([A-Z ]+)-----", re.DOTALL)
+
+# The biggest key file the app accepts, public or private: 8 KiB
+# A real one is way smaller (2 keys, the biggest is an encrypted RSA-4096 key, about 3.4 KiB)
+# Checked before the regex runs: on a crafted file with lots of BEGIN lines and no END,
+# the regex gets 4x slower each time the file doubles (0.55 s for 64 KiB), so a big file
+# could freeze the app. On 8 KiB it's nothing
+max_key_file_size = 8 * 1024
 
 
 # This func splits a PEM file into its blocks, one block per key
@@ -258,10 +266,13 @@ def public_keys_to_pem(encryption_public_key, signing_public_key=None) -> bytes:
 def load_public_keys(pem_data: bytes):
 
     # 1. Split the file into its PEM blocks
+    # A file too big is refused first, before the regex (see max_key_file_size)
     # labels is a list of the label of each block, full_blocks a list of each whole block
     # split_pem_blocks returns a tuple of 2 lists, and the 2 names on the left take one each
     # e.g. for a CryptEasy public.pem:
     # labels = [b"PUBLIC KEY", b"PUBLIC KEY"], full_blocks = [block 1, block 2]
+    if len(pem_data) > max_key_file_size:
+        raise InvalidKeyError("This file is too big to be a key file.")
     labels, full_blocks = split_pem_blocks(pem_data)
 
     # (1, 2) is a tuple of the numbers of keys allowed in the file
@@ -357,10 +368,13 @@ def private_keys_to_pem(encryption_key, signing_key) -> bytes:
 # or missing it raises WrongPassphraseError
 def load_private_keys(pem_data: bytes, password: bytes | None = None):
 
-    # 1. Split the file into its PEM blocks (same as in load_public_keys)
+    # 1. Split the file into its PEM blocks (same as in load_public_keys, with the same size
+    # limit before the regex)
     # labels is a list of the label of each block, full_blocks a list of each whole block
     # e.g. for the keys from private_keys_to_pem:
     # labels = [b"PRIVATE KEY", b"PRIVATE KEY"], full_blocks = [block 1, block 2]
+    if len(pem_data) > max_key_file_size:
+        raise InvalidPrivateKeyError("This file is too big to be a key file.")
     labels, full_blocks = split_pem_blocks(pem_data)
 
     # (1, 2) is a tuple of the numbers of keys allowed in the file
@@ -374,7 +388,13 @@ def load_private_keys(pem_data: bytes, password: bytes | None = None):
         if label not in private_labels:
             raise InvalidPrivateKeyError("This file is not a private key file.")
 
-    # 2. Load each key, with the password only if that block is encrypted
+    # 2. Check the encryption settings of each block, BEFORE the library opens it
+    # A crafted encrypted key can ask for minutes of CPU, GBs of RAM, or crash the library,
+    # all before the password is even checked. pem_guard.py reads the settings without any
+    # crypto and refuses what's not safe (raises InvalidPrivateKeyError)
+    pem_guard.check_private_blocks(labels, full_blocks)
+
+    # 3. Load each key, with the password only if that block is encrypted
     # keys is a list where I put each loaded key, in the same order as in the file
     # An encrypted block has the label "ENCRYPTED PRIVATE KEY" (PKCS#8), or a line
     # "Proc-Type: 4,ENCRYPTED" (older RSA format), both have the word ENCRYPTED in them
@@ -414,10 +434,18 @@ def load_private_keys(pem_data: bytes, password: bytes | None = None):
         except UnsupportedAlgorithm as e:
             # A key type the cryptography library doesn't know
             raise InvalidPrivateKeyError("Unsupported key algorithm.") from e
+        except TypeError as e:
+            # The library raises TypeError when it gets a password for a block that isn't
+            # encrypted (or none for one that is). I decide that with the word ENCRYPTED,
+            # which a crafted file can write in a block that isn't encrypted
+            raise InvalidPrivateKeyError("Invalid private key format.") from e
+        except InternalError as e:
+            # An error inside OpenSSL, e.g. no memory left while running the KDF
+            raise InvalidPrivateKeyError("This private key could not be opened.") from e
 
         keys.append(key)
 
-    # 3. The first key must be an encryption key (X25519 or RSA 2048 / 3072 / 4096)
+    # 4. The first key must be an encryption key (X25519 or RSA 2048 / 3072 / 4096)
     # keys[0] is the first element of the list (lists start at 0 in Python)
     encryption_key = keys[0]
     if get_key_type(encryption_key) is None:
@@ -425,7 +453,7 @@ def load_private_keys(pem_data: bytes, password: bytes | None = None):
             "The first key must be an X25519 or RSA (2048 / 3072 / 4096) key."
         )
 
-    # 4. The second key, if there is one, must be an Ed25519 signing key
+    # 5. The second key, if there is one, must be an Ed25519 signing key
     # signing_key starts as None (no signing key), and only changes if there are 2 keys
     # A key imported from somewhere else has no signing key, keystore/ will have to create one
     signing_key = None
