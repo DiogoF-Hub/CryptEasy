@@ -61,9 +61,18 @@ def header_length(file_enc):
     return 12 + int.from_bytes(file_enc[8:12], "big")
 
 
+# This func checks that a failed decryption left nothing in the output folder,
+# not even the temp .part file (spec 5.3 step 6)
+# The folder may not exist at all if the error came before it was created, that's fine too
+def assert_nothing_left(out_dir):
+    if out_dir.exists():
+        assert list(out_dir.iterdir()) == []
+
+
 # This is a list of sizes to test, around the chunk size (64 KiB = 65536 bytes) bcs that's
-# where mistakes happen: empty, 1 byte, 1 chunk exactly, 1 chunk + 1 byte, a few chunks
-sizes = [0, 1, 1000, 65536, 65537, 3 * 65536 + 123]
+# where mistakes happen: empty, 1 byte, 1 byte under a chunk, 1 chunk exactly,
+# 1 chunk + 1 byte, a few chunks, and a bigger file of 10 MiB (160 chunks)
+sizes = [0, 1, 1000, 65535, 65536, 65537, 3 * 65536 + 123, 10 * 1024 * 1024]
 
 
 # This test checks the main goal of #8: encrypt → decrypt gives back the exact same bytes,
@@ -216,6 +225,7 @@ def test_decrypt_bad_key(tmp_path):
         hybrid.decrypt_package(package_path, encryption_key.public_key(), tmp_path / "out")
     with pytest.raises(InvalidPrivateKeyError):
         hybrid.decrypt_package(package_path, signing_key, tmp_path / "out")
+    assert_nothing_left(tmp_path / "out")
 
 
 # This test checks that a package for someone else is refused right away ("not for you")
@@ -266,6 +276,7 @@ def test_tampered_header(tmp_path):
 
     with pytest.raises(DecryptionError):
         hybrid.decrypt_package(package_path, get_key("x25519"), tmp_path / "out")
+    assert_nothing_left(tmp_path / "out")
 
 
 # This test swaps the cipher in the header (aes-256 → aes-128): the file key in key.enc is
@@ -277,6 +288,7 @@ def test_tampered_cipher(tmp_path):
 
     with pytest.raises(DecryptionError):
         hybrid.decrypt_package(package_path, get_key("x25519"), tmp_path / "out")
+    assert_nothing_left(tmp_path / "out")
 
 
 # This test checks the chunks themselves: the last one removed, data added at the end,
@@ -324,6 +336,7 @@ def test_tampered_key_enc(tmp_path, key_type):
         write_package(package_path, key_enc_broken, file_enc)
         with pytest.raises(DecryptionError):
             hybrid.decrypt_package(package_path, get_key(key_type), tmp_path / "out")
+        assert_nothing_left(tmp_path / "out")
 
 
 # This test checks that key.enc from another package can't be mixed with this file.enc:
@@ -339,6 +352,7 @@ def test_key_enc_from_another_package(tmp_path):
     write_package(package_path, other_key_enc, file_enc)
     with pytest.raises(DecryptionError):
         hybrid.decrypt_package(package_path, get_key("x25519"), tmp_path / "out")
+    assert_nothing_left(tmp_path / "out")
 
 
 # This test checks that something that's not a package gives UnsupportedFormatError
@@ -347,16 +361,35 @@ def test_not_a_package(tmp_path):
     fake.write_bytes(b"just some text, not a zip")
     with pytest.raises(UnsupportedFormatError):
         hybrid.decrypt_package(fake, get_key("x25519"), tmp_path / "out")
+    assert_nothing_left(tmp_path / "out")
 
 
-# This test checks that a dangerous name inside the package is cleaned on decrypt
-def test_dangerous_name(tmp_path):
+# This test puts dangerous names in chunk 0 (the name the sender chose) and checks, with a
+# real encrypt → decrypt, that each one is cleaned and the file lands inside the out folder
+# A sender can write any name there, the recipient's app must never trust it
+def test_dangerous_names(tmp_path):
     src = tmp_path / "secret.txt"
     src.write_bytes(b"data")
-    package_path = tmp_path / "package.zip"
     public_key = get_key("x25519").public_key()
-    hybrid.encrypt_file(src, package_path, public_key, original_name="../../evil.exe")
 
-    out_dir = tmp_path / "out"
-    result = hybrid.decrypt_package(package_path, get_key("x25519"), out_dir)
-    assert result == out_dir / "evil.exe"
+    # This is a list of tuples (name written by the sender, name expected on the disk)
+    names = [
+        ("../../evil.exe", "evil.exe"),  # zip-slip with /
+        ("..\\..\\evil.exe", "evil.exe"),  # zip-slip with \
+        ("C:\\Windows\\evil.exe", "evil.exe"),  # absolute Windows path
+        ("/etc/passwd", "passwd"),  # absolute Linux path
+        ("", package.fallback_filename),  # empty
+        ("evil\x00.exe", package.fallback_filename),  # NUL character
+        ("CON", "_CON"),  # Windows device name
+    ]
+    # enumerate gives the position of each item too: 0, 1, 2...
+    for number, (name, expected) in enumerate(names):
+        package_path = tmp_path / f"package_{number}.zip"
+        hybrid.encrypt_file(src, package_path, public_key, original_name=name)
+
+        out_dir = tmp_path / f"out_{number}"
+        result = hybrid.decrypt_package(package_path, get_key("x25519"), out_dir)
+        assert result == out_dir / expected
+        assert result.read_bytes() == b"data"
+        # Only that one file in the out folder, nothing written anywhere else
+        assert list(out_dir.iterdir()) == [result]
