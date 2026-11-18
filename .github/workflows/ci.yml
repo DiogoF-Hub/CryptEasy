@@ -1,5 +1,6 @@
 # Lint (Ruff) and tests on every PR, and on every push to main or a personal *-dev branch
-# (tests on Windows + Linux).
+# (tests on Windows + Linux). On PRs and *-dev pushes, also a build check: the executable
+# is built and smoke-tested on Windows + Linux.
 # On a push to main that changes `version` in pyproject.toml (e.g. `uv version --bump patch`):
 #   1. builds the one-file executable per OS,
 #   2. publishes a GitHub Release tagged v<version> with both executables and SHA256SUMS.
@@ -67,6 +68,54 @@ jobs:
 
       - name: Run tests (make test)
         run: uv run pytest -m "not slow"
+
+  # Builds and smoke-tests the executable on every PR and personal-branch push, so a
+  # packaging problem shows up before the release build on main. The Windows exe is kept
+  # as an artifact for the manual tests (#24). The release itself is the `build` job below.
+  build-check:
+    name: Build check (${{ matrix.platform }})
+    needs: [lint, test]
+    if: github.ref != 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04 # same runner as the release build
+            platform: linux-x86_64
+          - os: windows-latest
+            platform: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    env:
+      # TEMPORARY, until #21 plugs in the real core/ and keystore/: RealBackend still
+      # raises NotImplementedError at startup, so the exe only starts with the demo
+      # backend. Remove this line once #21 is merged.
+      CRYPTEASY_FAKE_BACKEND: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Install Python (from .python-version)
+        run: uv python install
+
+      - name: Install dependencies (make install)
+        run: uv sync --locked
+
+      - name: Build executable (make build)
+        run: uv run pyinstaller --noconfirm --clean packaging/crypteasy.spec
+
+      - name: Smoke-test executable (make smoke)
+        run: uv run python packaging/smoke_test.py
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: runner.os == 'Windows'
+        with:
+          name: crypteasy-${{ github.sha }}-${{ matrix.platform }}
+          path: dist/crypteasy.exe
+          if-no-files-found: error
+          retention-days: 7
 
   version:
     name: Detect version bump
