@@ -62,10 +62,12 @@ lock_key_length = 32
 
 # Limits checked before running the KDF, bcs the settings come from the private.key file:
 # a crafted file could ask for 100 GB of RAM or a billion iterations and freeze the app
+# The iterations are at most about 1.5x the "max" preset (6 passes, 7 500 000), same
+# limits as keystore/. pem_guard.py uses the PBKDF2 one for imported key files too
 max_argon2_memory_kib = 1048576  # 1 GiB, same as the "max" preset
-max_argon2_iterations = 20
+max_argon2_iterations = 10
 max_argon2_parallelism = 16
-max_pbkdf2_iterations = 20_000_000
+max_pbkdf2_iterations = 10_000_000  # about 4 to 5 s on our laptops
 
 
 # This func gives the settings of a KDF for a strength, e.g. ("argon2id", "normal")
