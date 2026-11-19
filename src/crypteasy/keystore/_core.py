@@ -11,13 +11,11 @@ a package is encrypted for), not of the Ed25519 signing key.
 
 from __future__ import annotations
 
-from cryptography.exceptions import InternalError
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from crypteasy.core import kdf as core_kdf
 from crypteasy.core import keys
 
-from . import pem_guard
 from .errors import InvalidPrivateKeyError, InvalidSettingError
 
 
@@ -53,16 +51,9 @@ def load_private_pem(pem: bytes, password: bytes | None) -> tuple[bytes, bytes, 
     Returns (secret, public_pem, key_type, fingerprint).
     Raises InvalidPrivateKeyError, WrongPassphraseError.
     """
-    pem_guard.check_private_pem(pem)  # size and KDF cost, before the library runs any KDF
-    try:
-        encryption_key, signing_key = keys.load_private_keys(pem, password)
-    except TypeError as exc:
-        # cryptography raises TypeError when a password is given for a block that isn't
-        # encrypted, or none for one that is. core/keys.py decides that by looking for the
-        # word ENCRYPTED in the block, which a crafted header line can fake.
-        raise InvalidPrivateKeyError("encrypted and unencrypted blocks mixed up") from exc
-    except InternalError as exc:  # e.g. OpenSSL running out of memory in a KDF
-        raise InvalidPrivateKeyError("the key could not be decrypted") from exc
+    # core checks the size and the KDF cost first (core/pem_guard.py), before the library
+    # runs any KDF, and turns the library's TypeError / InternalError into its own errors
+    encryption_key, signing_key = keys.load_private_keys(pem, password)
     if signing_key is None:
         signing_key = ed25519.Ed25519PrivateKey.generate()
     return _identity_from(encryption_key, signing_key)
