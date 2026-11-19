@@ -12,6 +12,7 @@ from werkzeug.exceptions import HTTPException
 
 from .backend import Backend, default_backend
 from .dialogs import Dialogs, NoDialogs
+from .errors import UIError, user_message
 from .files import init_files
 from .i18n import available_languages, catalogs, current_language, detect_os_language, strings, t
 from .security import init_security
@@ -83,6 +84,12 @@ def create_app(
         if request.path.startswith("/api/"):
             return {"error": message}, code
         return render_template("error.html", code=code, message=message, bare=code == 403), code
+
+    @app.errorhandler(UIError)
+    def ui_error(e: UIError):
+        # Erreur traduite remontée en dehors d'un formulaire, par ex. contacts.json abîmé
+        # pendant l'affichage d'une page : on montre le message, pas « erreur inattendue »
+        return error_page(409, user_message(e))
 
     @app.errorhandler(CSRFError)
     def csrf_error(_e):

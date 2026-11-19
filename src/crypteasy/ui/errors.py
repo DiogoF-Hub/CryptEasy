@@ -63,6 +63,12 @@ class UnsafeArchive(UIError):
     key = "error.unsafe_archive"
 
 
+class StoreDamaged(UIError):
+    """contacts.json ou un dossier de clé illisible (abîmé ou modifié à la main)."""
+
+    key = "error.store_damaged"
+
+
 # --- Autres erreurs de l'interface -----------------------------------------------
 class FileExists(UIError):
     key = "error.file_exists"
