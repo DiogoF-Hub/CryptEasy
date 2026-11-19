@@ -48,6 +48,18 @@ def test_chaque_page_dans_chaque_langue(app, client, lang, path):
     assert f'<html lang="{lang}">' in r.get_data(as_text=True)
 
 
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_page_info_decrit_le_paquet_zip_de_la_spec(app, client, lang):
+    """#22 : SPEC § 5.1, exactement key.enc + file.enc. La signature (F9) est hors
+    périmètre depuis le 8/11 (decisions.md) : la page n'en parle plus."""
+    app.config["LANGUAGE"] = lang
+    page = client.get("/info").get_data(as_text=True)
+    assert "<code>key.enc</code>" in page and "<code>file.enc</code>" in page
+    assert ".zip" in page and ".ceasy" not in page
+    for word in ("signature", ".sig"):
+        assert word not in page.lower(), word
+
+
 def test_changer_de_langue_est_enregistre(app, client, backend):
     r = post(client, "/langue", {"lang": "en", "next": "/cles"})
     assert r.status_code == 302 and r.headers["Location"] == "/cles"

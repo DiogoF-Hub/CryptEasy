@@ -1,10 +1,10 @@
 """Backend : la seule porte entre l'interface et core/ + keystore/.
 
 - `Backend` (Protocol) : ce dont les écrans ont besoin. Les routes n'appellent que ça.
-- `RealBackend` : adaptateur au-dessus de core/ et keystore/ (SQUELETTE, à brancher
-  quand leurs signatures sont figées, SPEC_TECHNIQUE § 10).
-- `FakeBackend` (fake_backend.py) : pour les tests et pour utiliser l'interface
-  en attendant (bandeau « Mode démo »).
+- `RealBackend` (real_backend.py) : branché sur core/ et keystore/, convertit leurs
+  erreurs en messages traduits.
+- `FakeBackend` (fake_backend.py) : rien n'est chiffré, pour les tests de l'interface
+  et les démos (bandeau « Mode démo »).
 
 Choix par défaut (create_app(backend=None)) :
   CRYPTEASY_FAKE_BACKEND=1  → FakeBackend
@@ -17,13 +17,10 @@ lit et écrit directement, rien n'est envoyé par le navigateur.
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
-
-from . import errors
 
 # Appelé pendant les longues opérations : (octets traités, octets au total)
 Progress = Callable[[int, int], None]
@@ -109,7 +106,7 @@ class Backend(Protocol):
 
     # ----- Chiffrer / déchiffrer (F4, F5, § 5)
     def measure_speed(self) -> float:
-        """Vitesse de chiffrement de ce PC en octets/s (§ 5.5, core/speed.py)."""
+        """Vitesse de chiffrement de ce PC en octets/s (§ 5.5)."""
         ...
 
     def encrypt(
@@ -153,102 +150,6 @@ def default_backend() -> Backend:
         from .fake_backend import FakeBackend
 
         return FakeBackend()
+    from .real_backend import RealBackend
+
     return RealBackend()
-
-
-# --------------------------------------------------------------------------- #
-# RealBackend — SQUELETTE. Chaque méthode indique le module à appeler.
-# Les noms d'exceptions de core/errors.py sont à confirmer avec Track A.
-# --------------------------------------------------------------------------- #
-_CORE_ERRORS = [  # (nom dans core/errors.py, erreur d'interface) : les plus précises d'abord
-    ("WrongPassphraseError", errors.WrongPassphrase),
-    ("NoMatchingKeyError", errors.NoMatchingKey),
-    ("UnsupportedFormatError", errors.UnsupportedFormat),
-    ("ExtractionTooLargeError", errors.ExtractionTooLarge),
-    ("DecryptionError", errors.CorruptedFile),
-    ("InvalidPrivateKeyError", errors.InvalidPrivateKey),
-    ("InvalidKeyError", errors.InvalidPublicKey),
-]
-
-
-class RealBackend:
-    demo = False
-
-    def __init__(self) -> None:
-        try:
-            from crypteasy.core import errors as core_errors
-        except ImportError as exc:
-            raise SystemExit(
-                "CryptEasy : le moteur (src/crypteasy/core) n'est pas encore disponible.\n"
-                "Pour essayer l'interface en attendant : CRYPTEASY_FAKE_BACKEND=1 make run"
-            ) from exc
-        self._core_errors = core_errors
-
-    @contextmanager
-    def _translate(self) -> Iterator[None]:
-        """À utiliser autour de chaque appel à core/ ou keystore/."""
-        try:
-            yield
-        except Exception as exc:
-            for name, ui_error in _CORE_ERRORS:
-                cls = getattr(self._core_errors, name, None)
-                if cls is not None and isinstance(exc, cls):
-                    raise ui_error() from exc
-            raise
-
-    def _todo(self, where: str):
-        raise NotImplementedError(f"RealBackend : brancher sur {where}")
-
-    def list_identities(self):
-        return self._todo("keystore/identities.py")
-
-    def create_identity(self, name, key_type, protection):
-        return self._todo("core/keys.py + core/kdf.py + keystore/identities.py")
-
-    def import_private_key(self, name, key_file, current_passphrase, protection):
-        return self._todo("core/keys.py + keystore/identities.py")
-
-    def change_protection(self, fingerprint, current_passphrase, protection):
-        return self._todo("keystore/identities.py")
-
-    def export_public_key(self, fingerprint, dst):
-        return self._todo("keystore/identities.py")
-
-    def export_private_key(self, fingerprint, dst):
-        return self._todo("keystore/identities.py")
-
-    def delete_identity(self, fingerprint):
-        return self._todo("keystore/identities.py")
-
-    def list_contacts(self):
-        return self._todo("keystore/contacts.py")
-
-    def add_contact(self, name, public_pem):
-        return self._todo("keystore/contacts.py")
-
-    def rename_contact(self, fingerprint, new_name):
-        return self._todo("keystore/contacts.py")
-
-    def remove_contact(self, fingerprint):
-        return self._todo("keystore/contacts.py")
-
-    def measure_speed(self):
-        return self._todo("core/speed.py")
-
-    def encrypt(self, src, dst, recipient, cipher, progress):
-        return self._todo("core/folders.py + core/hybrid.py + core/package.py")
-
-    def inspect_package(self, package):
-        return self._todo("core/package.py")
-
-    def decrypt(self, package, out_dir, passphrase, progress, identity=None, key_file=None):
-        return self._todo("core/package.py + core/hybrid.py")
-
-    def extract_folder(self, zip_path, parent):
-        return self._todo("core/folders.py")
-
-    def load_settings(self):
-        return self._todo("keystore/paths.py (settings.json)")
-
-    def save_settings(self, settings):
-        return self._todo("keystore/paths.py (settings.json)")
