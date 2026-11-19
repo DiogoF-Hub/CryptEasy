@@ -98,7 +98,7 @@ The messages below are the English ones (`en.json`); in French, check the matchi
 | F1 | Decrypt with a wrong passphrase | "Wrong passphrase for this key." | | |
 | F2 | Delete Bob's key pair, then decrypt the photo package (D5) | "This file was not encrypted for any of your keys." | | |
 | F3 | Change one byte of a package (command 4), decrypt it | "This file is damaged or was modified. Nothing was decrypted." | | |
-| F4 | Cut a package in half (command 5), decrypt it | same message as F3 | | |
+| F4 | Cut a package in half (command 5), decrypt it | "This is not a CryptEasy file, or it was made by a newer version." (the end of the zip, its index, is gone, so it can't even be opened as a zip) | | |
 | F5 | Decrypt a normal `.zip` that isn't a CryptEasy package | "This is not a CryptEasy file, or it was made by a newer version." | | |
 | F6 | Import `note.txt` as a private key | "This is not a valid private key." | | |
 | F7 | Decrypt `note.txt` again and save it under the name of a file that already exists | "… already exists: CryptEasy never overwrites a file. Choose another name." | | |
