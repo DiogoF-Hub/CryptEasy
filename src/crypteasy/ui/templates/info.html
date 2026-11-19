@@ -40,7 +40,7 @@
         <tr><td>{{ icons.strong }} {{ t('level.strong') }}</td><td>X25519 / RSA-3072</td><td>AES-256-GCM</td><td>Argon2id</td><td>{{ t('option.kdf_strength.normal') }}</td><td>16</td><td>12+</td></tr>
         <tr><td>{{ icons.medium }} {{ t('level.medium') }}</td><td>RSA-2048</td><td>AES-128-GCM</td><td>PBKDF2</td><td>{{ t('option.kdf_strength.normal') }}</td><td>16</td><td>12+</td></tr>
         <tr><td>{{ icons.weak }} {{ t('level.weak') }}</td><td>RSA-2048</td><td>AES-128-GCM</td><td>PBKDF2</td><td>{{ t('option.kdf_strength.normal') }}</td><td>{{ t('info.none') }}</td><td>12+</td></tr>
-        <tr><td>{{ icons.none }} {{ t('level.none') }}</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>{{ t('info.none') }}</td></tr>
+        <tr><td>{{ icons.none }} {{ t('level.none') }}</td><td>{{ t('info.any') }}</td><td>{{ t('info.any') }}</td><td>{{ t('info.none') }}</td><td>{{ t('info.none') }}</td><td>{{ t('info.none') }}</td><td>{{ t('info.none') }}</td></tr>
       </tbody>
     </table>
   </div>
@@ -72,7 +72,6 @@
       <tbody>
         <tr><td><code>key.enc</code></td><td>{{ t('info.format_key') }}</td><td>{{ t('common.no') }}</td></tr>
         <tr><td><code>file.enc</code></td><td>{{ t('info.format_file') }}</td><td>{{ t('info.format_file_readable') }}</td></tr>
-        <tr><td><code>signature.sig</code></td><td>{{ t('info.format_sig') }}</td><td>{{ t('common.yes') }}</td></tr>
       </tbody>
     </table>
   </div>
