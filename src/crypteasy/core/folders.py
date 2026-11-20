@@ -98,6 +98,17 @@ def extract_folder(zip_path, parent):
             # total is too big, there's no need to start
             if sum(info.file_size for info in infos) > limit:
                 raise ExtractionTooLargeError("the files announced by the zip are too big")
+            # flag_bits are yes / no settings of each file, one per bit. 3 of them are never
+            # set by zip_folder (same 3 bits as open_package in core/package.py):
+            # - bit 0 (value 1): the file is password protected, Python would raise a
+            #   RuntimeError when opening it
+            # - bit 5 (value 32): "patched data", an old zip feature Python doesn't have
+            # - bit 6 (value 64): "strong encryption", same
+            # 1 | 32 | 64 = 97 is the 3 bits together, flag_bits & 97 is not 0 if one is set
+            # Checked here, so the extraction stops before the first file is written
+            for info in infos:
+                if info.flag_bits & (1 | 32 | 64):
+                    raise DecryptionError(f"protected entry in the zip: {info.filename!r}")
             # Every path is checked first, so a bad path at the end of the zip
             # stops the extraction before the first file is written
             targets = [safe_target(folder, info) for info in infos]
@@ -126,7 +137,21 @@ def extract_folder(zip_path, parent):
     except (FileExistsError, NotADirectoryError) as exc:
         shutil.rmtree(folder, ignore_errors=True)
         raise UnsafeArchiveError("the zip holds the same path twice") from exc
-    except (zipfile.BadZipFile, zipfile.LargeZipFile, EOFError) as exc:
+    # The errors Python's zipfile raises on a zip that isn't valid:
+    # - BadZipFile, EOFError: it's not a zip, or it's cut short
+    # - LargeZipFile: the zip needs ZIP64 but doesn't say so
+    # - UnicodeDecodeError: a name inside is marked as UTF-8 but isn't valid UTF-8
+    #   (raised as soon as the zip is opened)
+    # - NotImplementedError: a compression method Python doesn't know, or a zip that says
+    #   it needs a newer zip version (raised when that file is opened)
+    # Without them, the user would see "Unexpected error" (issue #60)
+    except (
+        zipfile.BadZipFile,
+        zipfile.LargeZipFile,
+        EOFError,
+        UnicodeDecodeError,
+        NotImplementedError,
+    ) as exc:
         shutil.rmtree(folder, ignore_errors=True)
         raise DecryptionError("the decrypted folder is not a valid zip") from exc
     # BaseException catches everything, even Ctrl+C: the folder is deleted, then
