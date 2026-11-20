@@ -1,5 +1,6 @@
 import os
 import stat
+import struct
 import sys
 import warnings
 import zipfile
@@ -317,6 +318,82 @@ def test_size_limit():
 def test_not_a_zip(tmp_path):
     zip_path = tmp_path / "broken.zip"
     zip_path.write_bytes(os.urandom(1000))
+    out = tmp_path / "out"
+    out.mkdir()
+
+    with pytest.raises(DecryptionError):
+        folders.extract_folder(zip_path, out)
+    assert list(out.iterdir()) == []
+
+
+# ----------------------------------------------------------------- crafted zips (issue #60)
+
+
+# This func changes one entry of a zip by hand, to make zips that Python's zipfile
+# refuses to write itself. Each entry is described twice in a zip: in its "local header"
+# (just before its data) and in the "central directory" (the list at the end of the zip)
+# - add_flags: bits added to flag_bits (e.g. 1 = "password protected")
+# - method: a new compression method number
+# - bad_utf8: the 1st byte of the name becomes 0xFF, and the name is marked as UTF-8
+#   (bit 11, value 0x800): 0xFF can never start a valid UTF-8 character
+# The numbers (6, 8, 10, 46) are the positions of each field, from the zip format spec
+def patch_entry(zip_path, name, add_flags=0, method=None, bad_utf8=False):
+    with zipfile.ZipFile(zip_path) as zf:
+        local = zf.getinfo(name).header_offset
+    data = bytearray(zip_path.read_bytes())
+    # The central record of this entry: each record starts with "PK\1\2" and its name is
+    # at +46, so I go from record to record until the name matches
+    central = data.index(b"PK\x01\x02")
+    while data[central + 46 : central + 46 + len(name)] != name.encode():
+        central = data.index(b"PK\x01\x02", central + 1)
+
+    # "<H" = a 2 byte number, little-endian, the way zips store them
+    for flags_at in (local + 6, central + 8):
+        flags = struct.unpack_from("<H", data, flags_at)[0]
+        if bad_utf8:
+            flags |= 0x800
+        struct.pack_into("<H", data, flags_at, flags | add_flags)
+    if method is not None:
+        struct.pack_into("<H", data, local + 8, method)
+        struct.pack_into("<H", data, central + 10, method)
+    if bad_utf8:
+        data[central + 46] = 0xFF
+    zip_path.write_bytes(bytes(data))
+
+
+# A compression method Python doesn't know (99 here): DecryptionError, not a raw
+# NotImplementedError. The good file written before it is deleted too
+def test_unknown_compression_is_refused(tmp_path):
+    zip_path = crafted_zip(tmp_path, {"good.txt": b"ok", "bad.txt": b"data"})
+    patch_entry(zip_path, "bad.txt", method=99)
+    out = tmp_path / "out"
+    out.mkdir()
+
+    with pytest.raises(DecryptionError):
+        folders.extract_folder(zip_path, out)
+    assert list(out.iterdir()) == []
+
+
+# A password protected entry (bit 0), or one using "patched data" (bit 5) or
+# "strong encryption" (bit 6): DecryptionError before anything is written,
+# not a raw RuntimeError or NotImplementedError
+@pytest.mark.parametrize("flag", [1, 32, 64])
+def test_protected_entry_is_refused(tmp_path, flag):
+    zip_path = crafted_zip(tmp_path, {"good.txt": b"ok", "bad.txt": b"data"})
+    patch_entry(zip_path, "bad.txt", add_flags=flag)
+    out = tmp_path / "out"
+    out.mkdir()
+
+    with pytest.raises(DecryptionError):
+        folders.extract_folder(zip_path, out)
+    assert list(out.iterdir()) == []
+
+
+# A name marked as UTF-8 that isn't valid UTF-8: DecryptionError, not a raw
+# UnicodeDecodeError
+def test_invalid_utf8_name_is_refused(tmp_path):
+    zip_path = crafted_zip(tmp_path, {"bad.txt": b"data"})
+    patch_entry(zip_path, "bad.txt", bad_utf8=True)
     out = tmp_path / "out"
     out.mkdir()
 
