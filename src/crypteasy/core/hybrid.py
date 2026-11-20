@@ -1,3 +1,4 @@
+import errno
 import os
 import zipfile
 from pathlib import Path
@@ -195,8 +196,11 @@ def encrypt_file(
     if cipher not in package.ciphers:
         raise ValueError(f"Invalid cipher! Use one of: {', '.join(package.ciphers)}")
     # Never overwrite a file (spec section 8)
+    # FileExistsError gets 3 values: the error number (errno.EEXIST = "already exists"),
+    # the message, and the path. The path goes in .filename, that's where the interface
+    # reads the name to show "holidays.zip already exists" to the user
     if package_path.exists():
-        raise FileExistsError(f"{package_path.name} already exists.")
+        raise FileExistsError(errno.EEXIST, "This file already exists.", str(package_path))
     if original_name is None:
         original_name = src_path.name
     name_bytes = original_name.encode("utf-8")
@@ -272,7 +276,7 @@ def encrypt_file(
         # 5. Everything worked: give the temp file its real name
         # Checked again, in case a file with that name appeared in the meantime
         if package_path.exists():
-            raise FileExistsError(f"{package_path.name} already exists.")
+            raise FileExistsError(errno.EEXIST, "This file already exists.", str(package_path))
         os.rename(temp_path, package_path)
         finished = True
 

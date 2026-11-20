@@ -1,4 +1,5 @@
 import json
+import unicodedata
 import zipfile
 from pathlib import Path
 
@@ -68,8 +69,21 @@ for number in range(1, 10):
     windows_reserved_names.append(f"COM{number}")
     windows_reserved_names.append(f"LPT{number}")
 
-# Max length kept for a file name, most systems refuse names longer than 255 characters
-max_filename_length = 200
+# Max length kept for a file name, in BYTES (UTF-8), not in characters
+# Linux and macOS refuse names over 255 bytes, and a character like "é" takes 2 bytes,
+# so 300 "é" (600 bytes) would make the decryption fail. 200 bytes leaves room for the
+# " (2)" free_path adds when the name is already taken
+max_filename_bytes = 200
+
+# This is a list of the Unicode categories of invisible characters that have no reason to
+# be in a file name. unicodedata.category gives 2 letters for each character, e.g. "Lu"
+# for a capital letter. These ones are:
+# - "Cc": control characters (NUL, new line, DEL...), the name is not trusted at all
+# - "Cf": format characters, e.g. U+202E "right-to-left override": it makes the text after
+#   it show backwards, so "a<U+202E>gnp.exe" shows as "aexe.png", a fake extension
+# - "Zl", "Zp": line and paragraph separators
+# - "Cs": surrogates, half characters that are not valid on their own
+invisible_categories = ["Cc", "Cf", "Zl", "Zp", "Cs"]
 
 
 # This func builds the start of file.enc: magic + version + header length + header JSON
@@ -165,9 +179,11 @@ def read_header(fin):
 
     # 3. Turn the JSON into a dictionary
     # json.loads raises a ValueError if it's not valid JSON (or not valid UTF-8 text)
+    # RecursionError: a crafted header like "[[[[[..." 60 000 times goes too deep for Python
+    # (ValueError, RecursionError) is a tuple of the 2 errors to catch at once
     try:
         header = json.loads(header_json)
-    except ValueError as error:
+    except (ValueError, RecursionError) as error:
         raise DecryptionError("The header is not valid JSON.") from error
     # The JSON could be valid but be a list or a number instead of a dictionary
     if not isinstance(header, dict):
@@ -185,10 +201,15 @@ def read_header(fin):
 def open_package(package_path) -> zipfile.ZipFile:
 
     # 1. Open it as a zip
-    # BadZipFile = it's not a zip at all (or the end of the zip is missing)
+    # This is a tuple of the errors Python's zipfile can raise on a zip that isn't valid:
+    # - BadZipFile: it's not a zip at all (or the end of the zip is missing)
+    # - UnicodeDecodeError: a name inside is marked as UTF-8 but isn't valid UTF-8
+    # - NotImplementedError: the zip says it needs a newer zip version to be read
+    # Not OSError: that one also means a real problem of the disk (file missing, no
+    # permission), the user must see that and not "not a CryptEasy file"
     try:
         zf = zipfile.ZipFile(package_path)
-    except zipfile.BadZipFile as error:
+    except (zipfile.BadZipFile, UnicodeDecodeError, NotImplementedError) as error:
         raise UnsupportedFormatError("Not a zip file.") from error
 
     # 2. Check the files inside
@@ -214,9 +235,22 @@ def open_package(package_path) -> zipfile.ZipFile:
 
     # The app always makes "stored" zips (not compressed, compressing encrypted data is
     # useless). Refusing the other ones means a small zip can't unpack into a huge file
-    # flag_bits & 1 is a bit that says the zip itself is password protected, never ours
+    # flag_bits are yes / no settings of each file, one per bit. 3 of them are never ours:
+    # - bit 0 (value 1): the zip itself is password protected
+    # - bit 5 (value 32): "patched data", an old zip feature Python doesn't have
+    # - bit 6 (value 64): "strong encryption", same
+    # Python only checks bits 5 and 6 when the file is opened, and raises NotImplementedError
+    # then, so I refuse them here first. & checks if a bit is set: 1 | 32 | 64 = 97 is the
+    # 3 bits together, flag_bits & 97 is not 0 if one of them is set
     for info in zf.infolist():
-        if info.compress_type != zipfile.ZIP_STORED or info.flag_bits & 1:
+        if info.compress_type != zipfile.ZIP_STORED or info.flag_bits & (1 | 32 | 64):
+            is_valid = False
+
+    # The zip says where each file starts (header_offset, in bytes from the start)
+    # A crafted zip can lie and give a place BEFORE the start of the file (negative),
+    # then reading it raises an OSError, which looks like a disk problem. So I refuse it here
+    for info in zf.infolist():
+        if info.header_offset < 0:
             is_valid = False
 
     # key.enc must have a sane size
@@ -257,15 +291,17 @@ def safe_filename(name: str) -> str:
     name = name.split("/")[-1]
 
     # 2. Go through every character
-    # A control character (code under 32, e.g. NUL or a new line) has no reason to be in a
+    # A control character (category "Cc", e.g. NUL or a new line) has no reason to be in a
     # real file name, so the name is not trusted at all and the fallback is used
-    # ord(character) gives the code of a character, e.g. ord("A") = 65
+    # The other invisible ones (e.g. right-to-left override) become "_", so the user sees
+    # the real name: "a<U+202E>gnp.exe" gives "a_gnp.exe", the real extension .exe shows
     # clean is a list where I put each character I keep, it starts empty
     clean = []
     for character in name:
-        if ord(character) < 32:
+        category = unicodedata.category(character)
+        if category == "Cc":
             return fallback_filename
-        if character in forbidden_characters:
+        if category in invisible_categories or character in forbidden_characters:
             clean.append("_")
         else:
             clean.append(character)
@@ -284,9 +320,17 @@ def safe_filename(name: str) -> str:
         name = "_" + name
 
     # 5. Too long: cut the name but keep the extension (e.g. ".pdf")
-    if len(name) > max_filename_length:
+    # The length is counted in bytes: len(name.encode("utf-8")) gives the number of bytes,
+    # e.g. "é" is 1 character but 2 bytes
+    # I remove one character at a time from the end of the stem (the part before the
+    # extension) until it fits. Cutting by characters (not bytes) means a 2 byte character
+    # is never cut in half
+    if len(name.encode("utf-8")) > max_filename_bytes:
         suffix = Path(name).suffix[:20]
-        name = name[: max_filename_length - len(suffix)] + suffix
+        stem = name[: len(name) - len(suffix)]
+        while len((stem + suffix).encode("utf-8")) > max_filename_bytes:
+            stem = stem[:-1]
+        name = stem + suffix
 
     return name
 
