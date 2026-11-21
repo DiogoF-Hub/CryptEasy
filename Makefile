@@ -50,8 +50,8 @@ test-slow: ## Slow tests only (large files); run before each milestone gate
 test-all: ## Every test, including slow ones
 	$(PYTEST) $(ARGS)
 
-build: ## Build the one-file executable into dist/
-	uv run pyinstaller --noconfirm --clean $(SPEC)
+build: ## Build the one-file executable into dist/ (Linux: needs GTK dev packages, see ci.yml)
+	uv run --group gtk pyinstaller --noconfirm --clean $(SPEC)
 
 smoke: ## Launch the built executable headless and check it answers on 127.0.0.1
 	uv run python packaging/smoke_test.py
