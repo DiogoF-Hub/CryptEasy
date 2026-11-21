@@ -85,11 +85,6 @@ jobs:
           - os: windows-latest
             platform: windows-x86_64
     runs-on: ${{ matrix.os }}
-    env:
-      # TEMPORARY, until #21 plugs in the real core/ and keystore/: RealBackend still
-      # raises NotImplementedError at startup, so the exe only starts with the demo
-      # backend. Remove this line once #21 is merged.
-      CRYPTEASY_FAKE_BACKEND: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
