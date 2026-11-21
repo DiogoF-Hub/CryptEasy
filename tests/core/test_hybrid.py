@@ -177,9 +177,13 @@ def test_encrypt_never_overwrites(tmp_path):
     package_path = tmp_path / "package.zip"
     package_path.write_bytes(b"something important")
 
-    with pytest.raises(FileExistsError):
+    # "as error" keeps the error, so I can check it after
+    # .filename must be the path: the interface shows its name ("package.zip already
+    # exists"), it used to be empty and showed "“” already exists" (#60)
+    with pytest.raises(FileExistsError) as error:
         hybrid.encrypt_file(src, package_path, get_key("x25519").public_key())
     assert package_path.read_bytes() == b"something important"
+    assert error.value.filename == str(package_path)
 
 
 # This test checks that decrypting twice in the same folder gives "secret (2).txt",
@@ -381,6 +385,8 @@ def test_dangerous_names(tmp_path):
         ("", package.fallback_filename),  # empty
         ("evil\x00.exe", package.fallback_filename),  # NUL character
         ("CON", "_CON"),  # Windows device name
+        ("a‮gnp.exe", "a_gnp.exe"),  # right-to-left override, would show "aexe.png"
+        ("é" * 300 + ".txt", "é" * 98 + ".txt"),  # 600 bytes: too long for the disk (#60)
     ]
     # enumerate gives the position of each item too: 0, 1, 2...
     for number, (name, expected) in enumerate(names):

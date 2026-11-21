@@ -118,6 +118,12 @@ def test_read_header_broken():
     with pytest.raises(DecryptionError):
         package.read_header(io.BytesIO(package.magic + bytes([1]) + (1024**3).to_bytes(4, "big")))
 
+    # 60 000 "[" in a row: valid start of JSON, but too deep for Python (RecursionError, #60)
+    deep = b"[" * 60000
+    fin = io.BytesIO(package.magic + bytes([1]) + len(deep).to_bytes(4, "big") + deep)
+    with pytest.raises(DecryptionError):
+        package.read_header(fin)
+
 
 # This test checks that a valid package opens, also with the optional signature.sig
 def test_open_package_valid(tmp_path):
@@ -162,6 +168,75 @@ def test_open_package_invalid(tmp_path):
     not_zip.write_bytes(b"\xff\xd8\xff this is not a zip")
     with pytest.raises(UnsupportedFormatError):
         package.open_package(not_zip)
+
+
+# This func gives the positions of the entries of the zip's table of contents
+# A zip ends with a table of contents (the "central directory"): one entry per file, each
+# one starts with the 4 bytes PK\x01\x02, and holds the name, the flags, the zip version
+# needed and where the file starts. A crafted zip changes those values
+def central_entries(data):
+    # positions is a list of where each entry starts, it starts empty
+    # .find gives the position of the first match from a position, or -1 if there is none
+    positions = []
+    position = data.find(b"PK\x01\x02")
+    while position != -1:
+        positions.append(position)
+        position = data.find(b"PK\x01\x02", position + 1)
+    return positions
+
+
+# This test changes values in the table of contents of a valid package (#60) and checks
+# each one gives our error, not a raw Python error (UnicodeDecodeError, NotImplementedError,
+# OSError) that the interface would show as "Unexpected error"
+# Numbers in a zip are written "little" endian (the smallest byte first), the opposite of
+# our header
+def test_open_package_crafted_zips(tmp_path):
+    path = tmp_path / "valid.zip"
+    header_bytes = package.make_header("x25519", fingerprint, "aes-256-gcm", False)
+    write_zip(path, {"key.enc": b"k", "file.enc": header_bytes + b"chunks"})
+    valid = path.read_bytes()
+
+    # 1. Name marked as UTF-8 (flag 0x800, at +8) but the bytes are not valid UTF-8
+    # The name starts at +46 in the entry, I replace its first 3 bytes ("key")
+    data = bytearray(valid)
+    entry = central_entries(valid)[0]
+    flags = int.from_bytes(data[entry + 8 : entry + 10], "little") | 0x800
+    data[entry + 8 : entry + 10] = flags.to_bytes(2, "little")
+    data[entry + 46 : entry + 49] = b"\xff\xfe\xfd"
+    bad_name = bytes(data)
+
+    # 2. "Version needed to read" (at +6) set to 255, a zip version that doesn't exist
+    data = bytearray(valid)
+    for entry in central_entries(valid):
+        data[entry + 6] = 255
+    bad_version = bytes(data)
+
+    # 3. The end of the zip (starts with PK\x05\x06) says where the table of contents is
+    # (at +16). Saying it's 5000 bytes further makes every file start before the zip itself
+    data = bytearray(valid)
+    end = valid.rfind(b"PK\x05\x06")
+    offset = int.from_bytes(data[end + 16 : end + 20], "little") + 5000
+    data[end + 16 : end + 20] = offset.to_bytes(4, "little")
+    bad_offset = bytes(data)
+
+    # This is a list of the 3 crafted zips
+    for number, crafted in enumerate([bad_name, bad_version, bad_offset]):
+        crafted_path = tmp_path / f"crafted_{number}.zip"
+        crafted_path.write_bytes(crafted)
+        with pytest.raises(UnsupportedFormatError):
+            package.read_package_info(crafted_path)
+
+    # 4. Flags (at +8) asking for 2 old zip features Python doesn't have: bit 5 (32) and
+    # bit 6 (64). Python only checks them when opening the file (NotImplementedError)
+    for bit in [32, 64]:
+        data = bytearray(valid)
+        for entry in central_entries(valid):
+            flags = int.from_bytes(data[entry + 8 : entry + 10], "little") | bit
+            data[entry + 8 : entry + 10] = flags.to_bytes(2, "little")
+        crafted_path = tmp_path / f"crafted_bit_{bit}.zip"
+        crafted_path.write_bytes(bytes(data))
+        with pytest.raises(UnsupportedFormatError):
+            package.read_package_info(crafted_path)
 
 
 # This test checks that the same name twice in a zip is refused
@@ -210,16 +285,26 @@ def test_safe_filename():
         ("folder/", package.fallback_filename),
         ("evil\x00.exe", package.fallback_filename),  # NUL character
         ("two\nlines.txt", package.fallback_filename),
+        ("del\x7f.txt", package.fallback_filename),  # DEL, a control character too
+        ("a‮gnp.exe", "a_gnp.exe"),  # right-to-left override: would show "aexe.png"
+        ("zero​width.txt", "zero_width.txt"),  # invisible space
+        ("line sep.txt", "line_sep.txt"),  # line separator
     ]
     for name, expected in names:
         assert package.safe_filename(name) == expected
 
 
 # This test checks that a very long name is cut but keeps its extension
+# The limit is in bytes: 300 "é" is 300 characters but 600 bytes, it used to stay too long
+# and the decryption failed with "File name too long" (#60)
 def test_safe_filename_too_long():
     name = package.safe_filename("a" * 1000 + ".pdf")
-    assert len(name) == package.max_filename_length
+    assert len(name.encode("utf-8")) == package.max_filename_bytes
     assert name.endswith(".pdf")
+
+    name = package.safe_filename("é" * 300 + ".pdf")
+    assert len(name.encode("utf-8")) <= package.max_filename_bytes
+    assert name == "é" * 98 + ".pdf"  # 98 x 2 bytes + 4 bytes = 200
 
 
 # This test checks that free_path never gives the path of a file that already exists
