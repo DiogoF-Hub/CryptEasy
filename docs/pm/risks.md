@@ -2,7 +2,7 @@
 
 The risks identified in the CDC (Sep 15), plus new ones the team spots during the project. Reviewed at every weekly meeting: did it happen, and what did we do?
 
-**Last updated:** Nov 14 (sprint 1 review)
+**Last updated:** Nov 22 (sprint 2 review)
 
 ---
 
@@ -22,4 +22,6 @@ Risks the team spots during the project (something that *could* go wrong, not so
 
 | # | Risk | Impact | Mitigation | Spotted on | Happened? | What we actually did |
 |---|---|---|---|---|---|---|
-| R6 | #8 (hybrid encryption) finished late | sprint 2 is blocked: plugging the real core into the interface (#21) and the exe (#18) both need it | Diogo finishes #8 this weekend (Nov 14 to 15); the team sees no other risk as long as everyone does their tasks | Nov 14 | | |
+| R6 | #8 (hybrid encryption) finished late | sprint 2 is blocked: plugging the real core into the interface (#21) and the exe (#18) both need it | Diogo finishes #8 this weekend (Nov 14 to 15); the team sees no other risk as long as everyone does their tasks | Nov 14 | ❌ **no** | Diogo merged #8 on Nov 14 (PR #52), as decided at the sprint 1 review |
+| R7 | the Linux binary doesn't run on Debian or Ubuntu | the optional Linux build (#20) can't be shown or used | #24 tests it on Ubuntu and Debian; the Linux binary is optional anyway | Nov 22 | | |
+| R8 | bugs found after the code freeze | less time left for the report and the slides in sprint 3 | the member who was in charge of the part fixes it, unless Yani can fix it himself | Nov 22 | | |
