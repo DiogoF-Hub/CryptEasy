@@ -37,7 +37,7 @@ Sprint 1 leftovers, finished on Nov 14 as decided at the sprint 1 review: #8 hyb
 
 | Issue | Who | Why |
 |---|---|---|
-| #24 Test the exe | Yani | the exe was only available on Nov 22 and Yani wasn't available then: done this afternoon (still sprint 2), on Windows without Python, and also on Ubuntu and Debian for the Linux binary |
+| #24 Test the exe | Yani | the exe was only available on Nov 22 and Yani wasn't available then: done this afternoon (still sprint 2), on Windows without Python, and the Linux binary in VMs on Ubuntu 22.04, Ubuntu 26.04 and Debian |
 
 ## 4. Bugs
 
@@ -61,7 +61,7 @@ Also add them to [decisions.md](../decisions.md).
 
 - code freeze from now (Nov 22): after it, only bug fixes go into `main`
 - a bug found after the freeze is fixed by the member who was in charge of that part, unless Yani can fix it himself
-- #24 also tests the Linux binary on Ubuntu and Debian
+- #24 also tests the Linux binary in VMs on Ubuntu 22.04, Ubuntu 26.04 and Debian
 - next week (sprint 3), everyone gets familiar with the whole code, to understand how it all works
 
 ## 7. Risks
@@ -69,7 +69,7 @@ Also add them to [decisions.md](../decisions.md).
 Anything new, or a risk that happened? Update [risks.md](../risks.md).
 
 - **R6** (#8 finished late): did **not** happen, #8 was merged on Nov 14 as planned
-- **R7 (new):** the Linux binary was built on Sam's Arch Linux, so nothing guarantees it runs on Debian or Ubuntu. #24 tests it on both
+- **R7 (new):** the CI builds the Linux binary on Ubuntu 22.04 but only starts it without its window (the CI has no screen), and the window was only tested on Sam's Arch Linux. #24 tests it in VMs on Ubuntu 22.04, Ubuntu 26.04 and Debian
 - **R8 (new):** the exe is tested after the code freeze, so bugs can still show up in sprint 3. Whoever was in charge of the part fixes them
 
 ## 8. Sprint 3: who does what
