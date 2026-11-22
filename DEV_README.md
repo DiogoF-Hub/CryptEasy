@@ -38,14 +38,14 @@ Run `make help` to list every target.
 | Target | What it does |
 |---|---|
 | `make install` | Install locked dependencies |
-| `make run` | Start the app and open it in the browser |
+| `make run` | Start the app in its own window (pywebview) |
 | `make lint` | Ruff lint + format check, no changes (CI runs this) |
 | `make format` | Auto-fix safe lint issues and format the code |
 | `make test` | Fast tests, without `@slow` (CI runs this) |
-| `make test-core` / `test-keystore` / `test-ui` / `test-e2e` | Tests for one track |
+| `make test-core` / `test-keystore` / `test-ui` | Tests for one part of the code |
 | `make test-slow` / `make test-all` | Large-file tests only / every test |
 | `make build` | Build the one-file executable into `dist/` |
-| `make smoke` | Run the built executable headless and check it answers on 127.0.0.1 |
+| `make smoke` | Run the built executable without its window (`--no-window`) and check it answers on 127.0.0.1 |
 | `make clean` | Remove `build/`, `dist/`, caches |
 
 Extra pytest arguments: `make test ARGS="-x -k header"`.
@@ -62,16 +62,18 @@ The CI workflow runs the same uv commands as these targets. If you change a targ
 
 ## 5. Tests
 
-- Layout: `tests/core/`, `tests/keystore/`, `tests/ui/`, `tests/e2e/`, one per track and `make test-*` target.
-- Mark tests that take minutes or GBs of disk with `@pytest.mark.slow`. Run them before each milestone gate with `make test-slow`.
+- Layout: `tests/core/`, `tests/keystore/`, `tests/ui/`, one per part of the code and `make test-*` target.
+- The UI tests run twice: once on the fake backend (`[demo]`) and once on the real `core/` + `keystore/` (`[real]`). CI has no screen, so tests never open the window.
+- Mark tests that take minutes or GBs of disk with `@pytest.mark.slow`. Run them before a release with `make test-slow`.
 - Tests never touch your real key store. Set `CRYPTEASY_HOME` to `tmp_path`.
 
 Environment variables the app understands:
 
 | Variable | Effect |
 |---|---|
-| `CRYPTEASY_HOME=<dir>` | Use `<dir>` instead of the per-user data directory |
-| `CRYPTEASY_NO_BROWSER=1` | Don't open a browser on start (used by `make smoke` / CI) |
+| `CRYPTEASY_HOME=<dir>` | Use `<dir>` instead of the per-user data folder (`%APPDATA%\CryptEasy`, `~/.local/share/CryptEasy`) |
+| `CRYPTEASY_NO_WINDOW=1` (or `--no-window`) | Start Flask only, no window (used by `make smoke` / CI). `CRYPTEASY_NO_BROWSER=1` still works too |
+| `CRYPTEASY_FAKE_BACKEND=1` | Run the interface on the fake backend (demo mode, a "Demo mode" banner shows) |
 
 ## 6. Branches and pull requests
 
@@ -85,14 +87,14 @@ Daily loop:
 2. Bring in the latest `main`: `git fetch origin && git merge origin/main`. Resolve any conflicts, then run `make test`.
 3. Commit small steps. Before pushing, run `make format && make lint && make test`.
 4. `git push`, and check that CI is green on your branch.
-5. When a piece of work is finished, open a PR `<name>-dev → main`. Ask a member from another track to review it. Changes to `core/` (crypto) are always reviewed by the key-management member.
-6. The owner merges it once CI is green and the review is approved.
+5. When a task is finished, open a PR `<name>-dev → main` with `Closes #<issue>` in the description. Someone else in the team reviews it.
+6. The owner merges it once CI is green and the review is approved. Then fill in **Actual (h)** on the board.
 
 Notes:
 
 - A PR contains **everything on your branch that isn't in `main` yet**. Open PRs often so they stay small and easy to review.
 - The owner merges with **"Create a merge commit"**, not "Squash" or "Rebase". With long-lived branches, a squash or rebase merge puts different commits on `main` than on your branch, so your next `git merge origin/main` runs into conflicts on work that was already merged.
-- At milestones, everyone opens their PR, and the owner merges them in the order A → C → B → D (crypto engine, key management, GUI, packaging). Then the team runs the milestone checks together before continuing.
+- Work is planned in one-week sprints, one issue per task on the [board](https://github.com/users/DiogoF-Hub/projects/1). Move your card to **In Progress** when you start, it goes to **Done** when the PR closes the issue.
 
 ## 7. Versioning and releases
 
@@ -118,6 +120,7 @@ Each version can be released once. CI refuses a version whose tag `v<version>` a
 |---|---|---|---|
 | `lint` | Linux | every PR, every push to `main` or a `*-dev` branch | `ruff check` + `ruff format --check`; problems show as annotations on the PR |
 | `test` | Linux + Windows | every PR, every push to `main` or a `*-dev` branch | `pytest -m "not slow"` |
+| `build-check` | Ubuntu 22.04 + Windows | every PR, every push to a `*-dev` branch | builds the exe and smoke-tests it, so a packaging problem shows before the release |
 | `version` | Linux | push to `main` | Did `version` change? Is it pre-release (`a`/`b`/`rc`/`dev`)? |
 | `build` | Ubuntu 22.04 + Windows | version changed, lint + tests green | PyInstaller one-file build, smoke test, package |
 | `release` | Linux | after `build` | Creates tag `v<version>` and a GitHub Release with both executables + `SHA256SUMS` |
@@ -138,3 +141,5 @@ make smoke
 ```
 
 PyInstaller cannot cross-compile. A Windows build needs Windows, and a Linux build needs Linux.
+
+On Linux, `make build` also needs the GTK dev packages (pywebview's window uses GTK), on Debian / Ubuntu: `sudo apt install libgirepository1.0-dev libcairo2-dev`. Only the Python side of GTK goes into the binary, GTK and WebKit2GTK come from the user's system.
