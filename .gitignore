@@ -196,6 +196,8 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+# ...but ours is written by hand and is the build recipe (#18)
+!packaging/crypteasy.spec
 
 # Installer logs
 pip-log.txt
