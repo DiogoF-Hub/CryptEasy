@@ -50,12 +50,10 @@ Les tâches de l'interface prévues dans le board totalisent 15,5 h. S'y ajouten
 | --- | --- | --- |
 | Première interface sur le faux moteur (15/10 → 05/11, hors board) | — | [? h] |
 | #14 PR de l'interface vers `main` | 0,5 h | 2 h |
-| #53 Thème verre dépoli (non prévu) | — | [? h] |
-| #21 Brancher le vrai moteur | 6 h | [? h] |
-| #22 Page Info à jour | 1 h | [? h] |
-| #28 Guide utilisateur | 3 h | [? h] |
-| #29 Cette section du rapport | 2 h | [? h] |
-| #30 Démo et vidéo de secours | 3 h | [? h] |
+| #53 Thème verre dépoli (non prévu) | — | [4 h] |
+| #21 Brancher le vrai moteur | 6 h | [8 h] |
+| #22 Page Info à jour | 1 h | [1 h] |
+| #28 Guide utilisateur | 3 h | [1 h] |
+| #29 Cette section du rapport | 2 h | [2 h] |
+| #30 Démo et vidéo de secours | 3 h | [4 h] |
 | **Total** | **15,5 h** | **[? h]** |
-
-[Une phrase de bilan une fois les temps remplis : par exemple, la PR #14 a pris 4 fois l'estimation, car il a fallu adapter l'interface aux règles du dépôt (Ruff, Python 3.13).]
