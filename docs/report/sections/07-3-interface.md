@@ -43,6 +43,6 @@ Ce qui manque : un avertissement quand une clé enregistrée est abîmée (elle 
 | #30 Démo et vidéo de secours | 3 | 4 |
 | **Total des tâches prévues** | **15,5** | **18** |
 | #53 Thème « verre dépoli » (non prévu) | — | 4 |
-| Première interface, du 15/10 au 05/11 (avant le board) | — | [? h] |
+| Première interface, du 15/10 au 05/11 (avant le board) | — | 6 |
 
 Les tâches prévues ont pris 18 h pour 15,5 h estimées (+16 %). #21 a dépassé de 2 h : il a fallu traduire chaque erreur du moteur et faire tourner tous les tests sur les deux moteurs. À l'inverse, #28 a pris 1 h au lieu de 3, car les captures du guide ont été faites automatiquement.
