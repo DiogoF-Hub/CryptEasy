@@ -17,19 +17,19 @@ Reached / partly / not reached: **partly**. The exe is built (pre-release `v1.0.
 | Issue | Who | Estimate (h) | Actual (h) | Note |
 |---|---|---|---|---|
 | #10 core: unit tests | Diogo | 4 | 3 | moved from sprint 1, PR #57 (Nov 18) |
-| #18 Windows exe (PyInstaller) | Sam | 6 | | PR #63 (Nov 22) |
-| #19 CI build and `v1.0.0rc1` release | Sam | 3 | | PR #63 (Nov 22), pre-release `v1.0.0rc1` published |
-| #20 Linux binary (optional) | Sam | 2 | | PR #63 (Nov 22) |
-| #21 Plug the real `core/` and `keystore/` into the interface | Yanis | 6 | | PR #59 (Nov 19) |
-| #22 Info page | Yanis | 1 | | PR #59 (Nov 19) |
+| #18 Windows exe (PyInstaller) | Sam | 6 | 3 | PR #63 (Nov 22) |
+| #19 CI build and `v1.0.0rc1` release | Sam | 3 | 1 | PR #63 (Nov 22), pre-release `v1.0.0rc1` published |
+| #20 Linux binary (optional) | Sam | 2 | 1 | PR #63 (Nov 22) |
+| #21 Plug the real `core/` and `keystore/` into the interface | Yanis | 6 | 8 | PR #59 (Nov 19) |
+| #22 Info page | Yanis | 1 | 1 | PR #59 (Nov 19) |
 | #23 Manual tests checklist | Yani | 2 | 2 | PR #58 (Nov 20) |
 | #25 Proofread the translations | Yani | 1 | 1 | PR #58 (Nov 20) |
 | #26 README and DEV_README | Diogo | 2 | 1 | PR #64 (Nov 22) |
-| #27 Sprint 2 review (this meeting) | team | 0.5 | | |
+| #27 Sprint 2 review (this meeting) | team | 0.5 | 0.5 | |
 | **Not planned, added during the sprint** | | | | |
 | #55 core: refuse crafted private key files | Diogo | 1.5 | 2.5 | PR #56 (Nov 18) |
 | #60 core: clear errors for crafted packages and folder zips | Diogo, Yani | 1.5 | 3 | found while reviewing PR #59; PR #61 (Diogo, Nov 20), PR #62 (Yani, Nov 22) |
-| **Total** | | **30.5** | | the missing actual times are added on the board by each member. Not in this table: #24 (3 h, in progress) |
+| **Total** | | **30.5** | **27** | actual times completed from the board on Nov 24. Not in this table: #24 (3 h estimated, 5 h actual, finished on Nov 23). Whole sprint on the board, #24 included: 33.5 h estimated, 32 h actual (−4 %) |
 
 Sprint 1 leftovers, finished on Nov 14 as decided at the sprint 1 review: #8 hybrid encryption (Diogo, PR #52) and #11 to #13 keystore (Sam, PR #50).
 
