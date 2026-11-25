@@ -2,7 +2,7 @@
 
 The risks identified in the CDC (Sep 15), plus new ones the team spots during the project. Reviewed at every weekly meeting: did it happen, and what did we do?
 
-**Last updated:** Nov 22 (sprint 2 review)
+**Last updated:** Nov 24 (after the manual tests, #24)
 
 ---
 
@@ -23,5 +23,5 @@ Risks the team spots during the project (something that *could* go wrong, not so
 | # | Risk | Impact | Mitigation | Spotted on | Happened? | What we actually did |
 |---|---|---|---|---|---|---|
 | R6 | #8 (hybrid encryption) finished late | sprint 2 is blocked: plugging the real core into the interface (#21) and the exe (#18) both need it | Diogo finishes #8 this weekend (Nov 14 to 15); the team sees no other risk as long as everyone does their tasks | Nov 14 | ❌ **no** | Diogo merged #8 on Nov 14 (PR #52), as decided at the sprint 1 review |
-| R7 | the Linux binary's window doesn't open on Ubuntu or Debian | the optional Linux build (#20) can't be shown or used | the CI builds it on Ubuntu 22.04 but only starts it without its window (no screen in the CI), and the window was only tested on Sam's Arch Linux: #24 tests it in VMs on Ubuntu 22.04, Ubuntu 26.04 and Debian. The Linux binary is optional anyway | Nov 22 | | |
-| R8 | bugs found after the code freeze | less time left for the report and the slides in sprint 3 | the member who was in charge of the part fixes it, unless Yani can fix it himself | Nov 22 | | |
+| R7 | the Linux binary's window doesn't open on Ubuntu or Debian | the optional Linux build (#20) can't be shown or used | the CI builds it on Ubuntu 22.04 but only starts it without its window (no screen in the CI), and the window was only tested on Sam's Arch Linux: #24 tests it in VMs on Ubuntu 22.04, Ubuntu 26.04 and Debian. The Linux binary is optional anyway | Nov 22 | ❌ **no** | #24: the window opened normally on Debian 13, Ubuntu 22.04 and Ubuntu 26.04, 16/16 tests OK on each ([manual-tests-linux.md](../manual-tests-linux.md)) |
+| R8 | bugs found after the code freeze | less time left for the report and the slides in sprint 3 | the member who was in charge of the part fixes it, unless Yani can fix it himself | Nov 22 | ⚠️ **partly** | one minor visual issue, found by Diogo after the freeze: some cards touch on the Info page (#67). Nothing is broken, so it isn't fixed (code freeze) and goes to the improvements in the report. No blocking bug in the manual tests |
