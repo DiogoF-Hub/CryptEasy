@@ -10,7 +10,7 @@ Cette annexe dit, pour chaque membre, quels outils d'intelligence artificielle o
 |---|---|---|---|
 | Sam | Claude (Anthropic), dans Claude Code | code de `keystore/` et de ses tests (#11 à #13), packaging et CI (#18 à #20), relecture de PR, rédaction des sections 7.2, 7.4 et 8.1 | voir ci-dessous |
 | Diogo | Claude Code | code de `core/` et ses tests (#6 à #8, #10, #55, #60), aide à la re-planification et aux documents de gestion de projet, README, relectures de PR, brouillons de messages à l'équipe | voir ci-dessous |
-| Yanis | *à compléter* | *à compléter* | *à compléter* |
+| Yanis | Claude (Anthropic), dans Claude Code | code de l'interface et ses tests (#14, #21, #22), guide utilisateur (#28), section 7.3 (#29), scénario et scripts de la démo (#30), textes des slides 3, 13 et 14 | voir ci-dessous |
 | Yani | Claude (Anthropic) | organisation de ses tâches, premiers jets et relecture des sections du rapport et des slides, checklist des tests manuels (#23), aide au code de l'archivage des dossiers (#9, #60) et à Git | voir ci-dessous |
 
 ## Sam
@@ -42,6 +42,22 @@ Cette annexe dit, pour chaque membre, quels outils d'intelligence artificielle o
 - Le code de `core/` est écrit dans mon propre style (fonctions simples, chaque étape commentée), pour que je puisse expliquer chaque ligne à l'oral. Quand ce n'était pas le cas, je l'ai fait réécrire : `pem_guard.py` a été réécrit dans mon style (#55), d'où 2,5 h au lieu de 1,5.
 - Rien n'a été publié sans que je le relise : commits, PR, commentaires et messages.
 - Le moteur est couvert par 127 tests automatiques, qui tournent sous Linux et Windows à chaque PR. Les fichiers piégés de #55 et #60, trouvés par Sam en relisant les PR #50 et #59, sont devenus des tests.
+
+## Yanis
+
+**Utilisation.** L'assistant a écrit, à partir de la spécification, des issues et de mes demandes :
+
+- le code de l'interface (`src/crypteasy/ui/`) : les écrans Flask, la fenêtre pywebview, les traductions FR / EN et leurs tests (#14) ;
+- le branchement sur le vrai moteur et la traduction des erreurs en messages clairs (#21), puis la mise à jour de la page Info (#22) ;
+- des textes et des documents : le guide utilisateur et ses captures (#28), la section 7.3 du rapport (#29), le scénario et les scripts de la démo (#30), les textes des slides 3, 13 et 14.
+
+**Contrôle.**
+
+- Avant chaque push, j'ai lancé le lint et les tests chez moi (`make lint`, `make test`). La CI les relance sous Linux et Windows, et chaque PR a été relue par un autre membre avant d'aller sur `main`.
+- Tous les tests de l'interface tournent aussi sur le vrai moteur, pas seulement sur le faux.
+- J'ai lancé l'application dans sa fenêtre sous Ubuntu, et je refais le scénario complet de la démo avant l'oral.
+
+**Limites.** Une grande partie de mon code et de mes textes a été produite par l'assistant ; mon travail a surtout consisté à formuler les demandes, à vérifier et à intégrer. Les durées de mes tâches (section 7.3) sont donc des estimations faites après coup, pas des temps mesurés.
 
 ## Yani
 
