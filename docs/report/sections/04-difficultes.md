@@ -1,11 +1,5 @@
 # 4. Difficultés rencontrées et traitement
 
-> **Rédacteur :** Yani · **Objectif :** 1,5 page · **Issue :** #33
->
-> Premier jet, à relire et à reformuler. Sources : `docs/pm/risks.md`, `docs/pm/planning-v2.md`, comptes rendus dans `docs/pm/meetings/`.
->
-> *Supprime ce bloc de consignes (les lignes qui commencent par `>`) quand ta partie est finie.*
-
 Le cahier des charges listait cinq risques. Nous avons suivi ce registre à chaque réunion de fin de sprint, en notant pour chaque risque s'il s'était produit et ce que nous avions fait (`docs/pm/risks.md`). Deux des risques prévus se sont réalisés, et d'autres difficultés sont apparues en cours de route. Pour chacune, nous décrivons ce qui s'est passé, ce que nous avons fait, et si cela a fonctionné.
 
 ## 4.1 Un démarrage tardif (risque R1)
