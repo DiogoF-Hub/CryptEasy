@@ -9,7 +9,7 @@ Cette annexe dit, pour chaque membre, quels outils d'intelligence artificielle o
 | Membre | Outil | Pour quoi | Comment c'est vérifié |
 |---|---|---|---|
 | Sam | Claude (Anthropic), dans Claude Code | code de `keystore/` et de ses tests (#11 à #13), packaging et CI (#18 à #20), relecture de PR, rédaction des sections 7.2, 7.4 et 8.1 | voir ci-dessous |
-| Diogo | *à compléter* | *à compléter* | *à compléter* |
+| Diogo | Claude Code | code de `core/` et ses tests (#6 à #8, #10, #55, #60), aide à la re-planification et aux documents de gestion de projet, README, relectures de PR, brouillons de messages à l'équipe | voir ci-dessous |
 | Yanis | *à compléter* | *à compléter* | *à compléter* |
 | Yani | *à compléter* | *à compléter* | *à compléter* |
 
@@ -29,3 +29,16 @@ Cette annexe dit, pour chaque membre, quels outils d'intelligence artificielle o
 - Les problèmes de sécurité signalés pendant les relectures ont été reproduits par un script avant d'être signalés à l'équipe.
 - Chaque affirmation des sections 7.2, 7.4 et 8.1 a été vérifiée contre le code, la documentation et GitHub avant l'envoi.
 
+## Diogo
+
+**Utilisation.** L'assistant a écrit, à partir de la spécification et de mes consignes :
+
+- le code de `core/` et ses tests (#6 à #8, #10), puis les correctifs #55 et #60 ;
+- une aide pour les documents de gestion de projet (re-planification du 8/11, issues du board), le README et le DEV_README ;
+- des relectures des PR de l'équipe (par exemple le message attendu du test F4, ou le nom vide dans « existe déjà », trouvé en relisant #59).
+
+**Contrôle.**
+
+- Le code de `core/` est écrit dans mon propre style (fonctions simples, chaque étape commentée), pour que je puisse expliquer chaque ligne à l'oral. Quand ce n'était pas le cas, je l'ai fait réécrire : `pem_guard.py` a été réécrit dans mon style (#55), d'où 2,5 h au lieu de 1,5.
+- Rien n'a été publié sans que je le relise : commits, PR, commentaires et messages.
+- Le moteur est couvert par 127 tests automatiques, qui tournent sous Linux et Windows à chaque PR. Les fichiers piégés de #55 et #60, trouvés par Sam en relisant les PR #50 et #59, sont devenus des tests.
