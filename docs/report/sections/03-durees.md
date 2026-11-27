@@ -26,7 +26,7 @@ S'y ajoutent 4 heures non estimées au sprint 1 : le thème graphique de l'inter
 
 **Le travail autour du code a été sous-estimé.** La fusion de l'interface (#14) était prévue en 30 minutes et a pris 2 heures : il ne s'agissait pas seulement de fusionner, il a fallu adapter toute l'interface aux règles du dépôt. Le branchement du vrai backend (#21) a pris 2 heures de plus que prévu. Le branchement lui-même est allé vite, mais il a fallu traduire chaque erreur du moteur en message français et anglais, puis faire tourner tous les tests de l'interface sur le vrai moteur.
 
-**Les tâches techniques du moteur ont été surestimées.** Les clés, le KDF et le chiffrement hybride (#6 à #8) ont pris 4 heures de moins que prévu. La spécification technique écrite en octobre décrivait le moteur en détail : il n'y avait plus de choix à faire en codant. Les tests ont aussi été écrits en même temps que le code, au lieu de venir après.
+**Les tâches techniques du moteur ont été surestimées.** Les clés, le KDF et le chiffrement hybride (#6 à #8) ont pris 4 heures de moins que prévu. La spécification technique écrite en octobre décrivait le moteur en détail : il n'y avait plus de choix à faire en codant. Les tests ont aussi été écrits en même temps que le code, au lieu de venir après. Enfin, Diogo s'est aidé d'un assistant d'IA (Claude Code) pour écrire le moteur et ses tests à partir de cette spécification (voir l'annexe sur l'IA).
 
 **L'exécutable a été bien plus rapide que prévu.** Les tâches #18 à #20 ont pris 5 heures au lieu de 11. Sam s'est aidé d'un assistant d'IA, qui a accéléré la mise au point de la compilation et la recherche des problèmes.
 

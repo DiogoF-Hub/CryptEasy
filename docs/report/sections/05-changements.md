@@ -1,11 +1,5 @@
 # 5. Changements apportés aux objectifs
 
-> **Rédacteur :** Yani · **Objectif :** 1 page · **Issue :** #33
->
-> Premier jet, à relire et à reformuler. Sources : `docs/pm/decisions.md`, `docs/pm/risks.md` (R3), `docs/pm/planning-v2.md` §3.3, `docs/CryptEasy_CDC.pdf`.
->
-> *Supprime ce bloc de consignes (les lignes qui commencent par `>`) quand ta partie est finie.*
-
 Le cahier des charges prévoyait une application qui génère une paire de clés, chiffre un fichier pour un destinataire, le déchiffre, gère un carnet de contacts et, si le temps le permettait, signe les fichiers. Le tout dans un exécutable autonome. Par rapport à ce périmètre, nous avons ajouté des fonctions, et nous en avons retiré d'autres.
 
 ## 5.1 Ce que nous avons ajouté

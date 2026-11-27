@@ -1,11 +1,5 @@
 # 9. Pistes d'amélioration
 
-> **Rédacteur :** Yani · **Objectif :** 1 page · **Issue :** #46
->
-> Premier jet. La partie « Organisation » est à valider en équipe à la revue finale du 28/11 (#39).
->
-> *Supprime ce bloc de consignes (les lignes qui commencent par `>`) quand ta partie est finie.*
-
 ## Fonctionnalités non réalisées
 
 **La signature de fichiers.** Le cahier des charges la prévoyait comme fonction complémentaire. Le 8 novembre, faute de temps, nous l'avons gardée en objectif secondaire, sans la planifier dans les sprints. Le plus dur est pourtant déjà fait : depuis le 18 octobre, chaque paire de clés contient aussi une clé de signature Ed25519. Ajouter la signature ne changerait donc rien aux clés et aux contacts existants : il resterait à signer le paquet au chiffrement et à vérifier la signature au déchiffrement.
@@ -22,8 +16,10 @@
 
 ## Organisation : ce que nous ferions autrement
 
-*À compléter avec l'équipe le 28/11. Pistes issues des revues de sprint :*
+**Commencer le code tout de suite, par petits morceaux.** Le développement a démarré avec 5 semaines de retard (section 4.1) : après le cahier des charges, aucune échéance proche ne nous poussait à commencer. Avec des sprints courts dès la fin septembre, même sur une petite partie du moteur, le retard se serait vu en une semaine, et pas le 8 novembre.
 
-- **Commencer le code plus tôt.** Le développement a démarré avec 5 semaines de retard sur le cahier des charges. Des sprints courts dès septembre auraient montré ce retard bien avant le 8 novembre.
-- **Livrer tôt ce dont les autres ont besoin.** L'exe est arrivé le dernier jour du sprint 2, ce qui a repoussé les tests manuels après le gel du code.
-- **Écrire le rapport en Markdown dès le début.** Le Word partagé cassait la mise en forme ; nous sommes passés à un fichier par section le 24 novembre.
+**Planifier selon notre rythme d'alternance.** Les semaines à l'IUT et en entreprise ne nous laissent pas le même temps libre, et nous l'avons découvert en cours de route (section 4.3). La prochaine fois, nous en tiendrions compte dès le planning, en plaçant les tâches les plus longues sur les semaines où chacun a le plus de temps.
+
+**Livrer tôt ce dont les autres ont besoin.** L'exécutable est arrivé le dernier jour du sprint 2, et les tests manuels ont dû passer après le gel du code (section 4.4). Une première version de l'exécutable, même incomplète, dès le milieu du sprint aurait permis de commencer les tests plus tôt.
+
+**Écrire le rapport en Markdown dès le début.** Le Word partagé cassait la mise en forme à chaque modification, et nous ne sommes passés à un fichier par section que le 24 novembre. Avec ce format dès octobre, le rapport aurait avancé au fil des sprints, relu par pull request comme le code.
