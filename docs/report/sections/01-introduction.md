@@ -28,4 +28,4 @@ Ce rapport raconte surtout comment nous nous sommes organisés, et comment nous 
 - **Section 9** : les pistes d'amélioration.
 - **Section 10** : la conclusion.
 
-En annexe, on trouve notamment le tableau complet des durées, le guide utilisateur et l'utilisation de l'intelligence artificielle par l'équipe.
+En annexe, on trouve notamment les plannings détaillés, l'historique Git, les résultats des tests manuels, le tableau complet des durées et l'utilisation de l'intelligence artificielle par l'équipe.

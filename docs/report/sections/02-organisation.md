@@ -46,7 +46,7 @@ La figure 1 compare le planning du cahier des charges au déroulé réel. Après
 Les objectifs des sprints ont été atteints :
 - **Sprint 1 :** le chiffrement hybride fonctionne depuis le 14 novembre. Seuls les tests unitaires du moteur (#10) ont été décalés au sprint 2, décision prise à la revue du 14 novembre.
 - **Sprint 2 :** l'exécutable a été publié le 22 novembre (version `1.0.0rc1`). Les tests manuels ont suivi le 22 et le 23, avec un jour de retard : l'exécutable était arrivé le dernier jour du sprint.
-- **Sprint 3 :** *(à compléter le 28 novembre)*.
+- **Sprint 3 :** le rapport et les slides ont été bouclés le 27 novembre, et validés à la réunion de fin de sprint le soir même. Diogo dépose l'archive sur Arche le 28. Une tâche non prévue s'est ajoutée : l'annexe sur l'utilisation de l'IA (#72).
 
 L'organisation a continué de s'adapter en cours de route. Le 10 novembre, le découpage d'un dossier en archive (#9) est passé de Diogo à Yani, parce que Diogo avait 26 heures prévues au sprint 1, la plus grosse charge de l'équipe. Le 24 novembre, nous avons abandonné le document Word partagé pour écrire le rapport en Markdown, une section par fichier, parce que l'édition à plusieurs cassait la mise en forme.
 
